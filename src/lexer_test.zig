@@ -111,3 +111,111 @@ test "test full file" {
 
     try std.testing.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
+
+test "empty" {
+    const t = std.testing;
+    var tokens = try lexer.lex("", t.allocator);
+    defer tokens.clearAndFree();
+    try t.expect(tokens.items.len == 0);
+}
+
+test "test multiple in command" {
+    const t = std.testing;
+    var tokens = try lexer.lex("cmake_minimum_required(VERSION 3.16 FATAL_ERROR)", t.allocator);
+    defer tokens.clearAndFree();
+    const expectedTokens = [_]lexer.Token{
+        .{ .Cmd = .{ .name = "cmake_minimum_required" } },
+        .{ .Paren = .{ .opener = true } },
+        .{ .UnquotedArg = .{ .name = "VERSION" } },
+        .{ .UnquotedArg = .{ .name = "3.16" } },
+        .{ .UnquotedArg = .{ .name = "FATAL_ERROR" } },
+        .{ .Paren = .{ .opener = false } },
+    };
+    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+}
+
+test "test multiple parens in command" {
+    const t = std.testing;
+    var tokens = try lexer.lex("if((CMAKE_CXX_COMPILER_ID STREQUAL \"GNU\") AND (${CMAKE_SYSTEM_NAME} MATCHES \"Linux\"))", t.allocator);
+    defer tokens.clearAndFree();
+
+    const expectedTokens = [_]lexer.Token{
+        .{ .Cmd = .{ .name = "if" } },
+        .{ .Paren = .{ .opener = true } },
+        .{ .Paren = .{ .opener = true } },
+        .{ .UnquotedArg = .{ .name = "CMAKE_CXX_COMPILER_ID" } },
+        .{ .UnquotedArg = .{ .name = "STREQUAL" } },
+        .{ .QuotedArg = .{ .name = "\"GNU\"" } },
+        .{ .Paren = .{ .opener = false } },
+        .{ .UnquotedArg = .{ .name = "AND" } },
+        .{ .Paren = .{ .opener = true } },
+        .{ .UnquotedArg = .{ .name = "${CMAKE_SYSTEM_NAME}" } },
+        .{ .UnquotedArg = .{ .name = "MATCHES" } },
+        .{ .QuotedArg = .{ .name = "\"Linux\"" } },
+        .{ .Paren = .{ .opener = false } },
+        .{ .Paren = .{ .opener = false } },
+    };
+    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+}
+
+test "test escaped unquoted arg" {
+    const t = std.testing;
+    var tokens = try lexer.lex("set(VAR \\\"\\\")", t.allocator);
+    defer tokens.clearAndFree();
+    //     std.debug.print("{any}\n", .{tokens});
+    const expectedTokens = [_]lexer.Token{
+        .{ .Cmd = .{ .name = "set" } },
+        .{ .Paren = .{ .opener = true } },
+        .{ .UnquotedArg = .{ .name = "VAR" } },
+        .{ .UnquotedArg = .{ .name = "\\\"\\\"" } },
+        .{ .Paren = .{ .opener = false } },
+    };
+    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+}
+
+test "comment in args" {
+    const source =
+        \\if(VarA
+        \\   AND VARB
+        \\   AND VARC # Some comment
+        \\)
+    ;
+
+    const t = std.testing;
+    var tokens = try lexer.lex(source, std.testing.allocator);
+    defer tokens.clearAndFree();
+    const expectedTokens = [_]lexer.Token{
+        .{ .Cmd = .{ .name = "if" } },
+        .{ .Paren = .{ .opener = true } },
+        .{ .UnquotedArg = .{ .name = "VarA" } },
+        .{ .Newline = .{} },
+        .{ .UnquotedArg = .{ .name = "AND" } },
+        .{ .UnquotedArg = .{ .name = "VARB" } },
+        .{ .Newline = .{} },
+        .{ .UnquotedArg = .{ .name = "AND" } },
+        .{ .UnquotedArg = .{ .name = "VARC" } },
+        .{ .Comment = .{ .bracketed = false, .name = "# Some comment" } },
+        .{ .Newline = .{} },
+        .{ .Paren = .{ .opener = false } },
+    };
+    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+}
+
+test "unquoted arg containing quotes" {
+    const t = std.testing;
+    const source = "execute_process(COMMAND git log -1 --format=%cd --date=format:\"%Y-%m-%d %H:%M:%S\")";
+    var tokens = try lexer.lex(source, std.testing.allocator);
+    defer tokens.clearAndFree();
+    const expectedTokens = [_]lexer.Token{
+        .{ .Cmd = .{ .name = "execute_process" } },
+        .{ .Paren = .{ .opener = true } },
+        .{ .UnquotedArg = .{ .name = "COMMAND" } },
+        .{ .UnquotedArg = .{ .name = "git" } },
+        .{ .UnquotedArg = .{ .name = "log" } },
+        .{ .UnquotedArg = .{ .name = "-1" } },
+        .{ .UnquotedArg = .{ .name = "--format=%cd" } },
+        .{ .UnquotedArg = .{ .name = "--date=format:\"%Y-%m-%d %H:%M:%S\"" } },
+        .{ .Paren = .{ .opener = false } },
+    };
+    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+}
