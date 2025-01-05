@@ -456,3 +456,7 @@ test "unquoted arg containing quotes" {
     };
     try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
+
+test {
+    _ = @import("lexer_test.zig");
+}
