@@ -43,6 +43,6 @@ pub fn main() !void {
     formatter.format(tokens);
 }
 
-test "lexer tests" {
+test {
     _ = @import("lexer.zig");
 }
