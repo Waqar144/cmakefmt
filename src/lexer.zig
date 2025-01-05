@@ -349,6 +349,13 @@ pub fn lex(source: []const u8, allocator: std.mem.Allocator) !std.ArrayList(Toke
     return tokens;
 }
 
+test "empty" {
+    const t = std.testing;
+    var tokens = try lex("", t.allocator);
+    defer tokens.clearAndFree();
+    try t.expect(tokens.items.len == 0);
+}
+
 test "test multiple in command" {
     const t = std.testing;
     var tokens = try lex("cmake_minimum_required(VERSION 3.16 FATAL_ERROR)", t.allocator);
