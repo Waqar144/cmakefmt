@@ -5,7 +5,6 @@ var indent: u32 = 0;
 const indentWidth = 4;
 var currentTokenIndex: *u32 = undefined;
 var gtokens: *const std.ArrayList(lex.Token) = undefined;
-
 var g_outFile: *const std.fs.File = undefined;
 
 fn write(text: []const u8) void {
@@ -65,11 +64,63 @@ fn isNextTokenComment() bool {
 fn handleCommand(cmd: lex.Command) void {
     write(cmd.name);
 
+    currentTokenIndex.* += 1;
+    var bracketDepth: i32 = 0;
+    var prevTokenIsNewline = false;
+    indent += 1;
+    // number of new lines that will be found in the block
+    var newlines: u32 = 0;
+
+    while (currentTokenIndex.* < gtokens.items.len) {
+        switch (gtokens.items[currentTokenIndex.*]) {
+            .Cmd => |_| {
+                std.log.err("command in unexpected place, probably a bug: {s}\n", .{cmd.name});
+                std.process.exit(1);
+            },
+            .Paren => |p| {
+                bracketDepth += if (p.opener) 1 else -1;
+
+                // if the open paren and close isn't on the same line then push it to a newline
+                if (bracketDepth == 0 and !prevTokenIsNewline and !p.opener and newlines > 0)
+                    writeln();
+
+                handleParen(p);
+
+                if (bracketDepth == 0) {
+                    break;
+                }
+            },
+            .UnquotedArg => |uq| {
+                handleUnquotedArg(uq);
+            },
+            .QuotedArg => |q| {
+                handleQuotedArg(q);
+            },
+            .BracketedArg => |b| {
+                handleBracketedArg(b);
+            },
+            .Comment => |c| handleComment(c),
+            .Newline => |_| {
+                handleNewline();
+                newlines += 1;
+            },
+        }
+
+        prevTokenIsNewline = std.meta.activeTag(gtokens.items[currentTokenIndex.*]) == .Newline;
+        currentTokenIndex.* += 1;
+    }
+
+    if (bracketDepth != 0) {
+        std.log.err("unbalanced brackets when processing: {s}\n", .{cmd.name});
+        std.process.exit(1);
+    }
+    indent -= 1;
+
     if (isControlStructureBegin(cmd.name)) {
         indent += 1;
     } else if (isControlStructureEnd(cmd.name)) {
         if (indent == 0) {
-            std.log.err("unbalanced control structure when processing: {s}", .{cmd.name});
+            std.log.err("unbalanced control structure when processing: {s}\n", .{cmd.name});
             std.process.exit(1);
         }
         indent -= 1;
@@ -79,7 +130,6 @@ fn handleCommand(cmd: lex.Command) void {
 fn handleParen(a: lex.Paren) void {
     if (a.opener) {
         write("(");
-        indent += 1;
     } else {
         write(")");
 
@@ -89,8 +139,6 @@ fn handleParen(a: lex.Paren) void {
         if (!isNextTokenParenClose() and !isNextTokenNewline() and !isNextTokenComment()) {
             write(" ");
         }
-
-        indent -= 1;
     }
 }
 
@@ -147,6 +195,7 @@ fn handleNewline() void {
         }
     }
 
+    var toIndent = indent;
     // reduce indent if
     // - the next token is an end block command
     // - the next token is )
@@ -154,15 +203,14 @@ fn handleNewline() void {
     if (indent > 0 and currentTokenIndex.* + 1 < gtokens.items.len) {
         const nextToken = gtokens.items[currentTokenIndex.* + 1];
         const tag = std.meta.activeTag(nextToken);
-        const toIndent = if ((tag == lex.Token.Cmd and isControlStructureEnd(nextToken.Cmd.name)) or isNextTokenParenClose() or isElse())
-            indent - 1
-        else
-            indent;
+        if ((tag == lex.Token.Cmd and isControlStructureEnd(nextToken.Cmd.name)) or isNextTokenParenClose() or isElse()) {
+            toIndent = indent - 1;
+        }
+    }
 
-        for (0..toIndent) |_| {
-            for (0..indentWidth) |_| {
-                write(" ");
-            }
+    for (0..toIndent) |_| {
+        for (0..indentWidth) |_| {
+            write(" ");
         }
     }
 }
@@ -180,10 +228,10 @@ pub fn format(tokens: std.ArrayList(lex.Token)) void {
 
         switch (token) {
             .Cmd => |c| handleCommand(c),
-            .Paren => |p| handleParen(p),
-            .UnquotedArg => |uq| handleUnquotedArg(uq),
-            .QuotedArg => |q| handleQuotedArg(q),
-            .BracketedArg => |b| handleBracketedArg(b),
+            .UnquotedArg, .QuotedArg, .BracketedArg, .Paren => {
+                std.log.err("Args/Parens should already be handled in handleCommand, this is a bug\n", .{});
+                std.debug.assert(false);
+            },
             .Comment => |c| handleComment(c),
             .Newline => |_| handleNewline(),
         }
