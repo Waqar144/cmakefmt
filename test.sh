@@ -1,6 +1,3 @@
-# run unit test
-zig build test
-
 ./zig-out/bin/cmakeformat test/test.cmake &> test/test.actual.cmake
 if cmp -s test/test.expected.cmake test/test.actual.cmake; then
     echo "test passed";
