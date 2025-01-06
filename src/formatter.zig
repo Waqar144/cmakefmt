@@ -43,7 +43,7 @@ fn peekNext() ?lex.Token {
 
 fn isElse() bool {
     const nextToken = peekNext();
-    return nextToken != null and std.meta.activeTag(nextToken.?) == .Cmd and std.mem.eql(u8, nextToken.?.Cmd.name, "else");
+    return nextToken != null and std.meta.activeTag(nextToken.?) == .Cmd and std.mem.eql(u8, nextToken.?.Cmd.text, "else");
 }
 
 fn isNextTokenNewline() bool {
@@ -62,7 +62,7 @@ fn isNextTokenComment() bool {
 }
 
 fn handleCommand(cmd: lex.Command) void {
-    write(cmd.name);
+    write(cmd.text);
 
     currentTokenIndex.* += 1;
     var bracketDepth: i32 = 0;
@@ -74,7 +74,7 @@ fn handleCommand(cmd: lex.Command) void {
     while (currentTokenIndex.* < gtokens.items.len) {
         switch (gtokens.items[currentTokenIndex.*]) {
             .Cmd => |_| {
-                std.log.err("command in unexpected place, probably a bug: {s}\n", .{cmd.name});
+                std.log.err("command in unexpected place, probably a bug: {s}\n", .{cmd.text});
                 std.process.exit(1);
             },
             .Paren => |p| {
@@ -111,16 +111,16 @@ fn handleCommand(cmd: lex.Command) void {
     }
 
     if (bracketDepth != 0) {
-        std.log.err("unbalanced brackets when processing: {s}\n", .{cmd.name});
+        std.log.err("unbalanced brackets when processing: {s}\n", .{cmd.text});
         std.process.exit(1);
     }
     indent -= 1;
 
-    if (isControlStructureBegin(cmd.name)) {
+    if (isControlStructureBegin(cmd.text)) {
         indent += 1;
-    } else if (isControlStructureEnd(cmd.name)) {
+    } else if (isControlStructureEnd(cmd.text)) {
         if (indent == 0) {
-            std.log.err("unbalanced control structure when processing: {s}\n", .{cmd.name});
+            std.log.err("unbalanced control structure when processing: {s}\n", .{cmd.text});
             std.process.exit(1);
         }
         indent -= 1;
@@ -143,7 +143,7 @@ fn handleParen(a: lex.Paren) void {
 }
 
 fn handleUnquotedArg(a: lex.UnquotedArg) void {
-    write(a.name);
+    write(a.text);
 
     if (!isNextTokenNewline() and !isNextTokenParenClose()) {
         write(" ");
@@ -151,7 +151,7 @@ fn handleUnquotedArg(a: lex.UnquotedArg) void {
 }
 
 fn handleQuotedArg(a: lex.QuotedArg) void {
-    write(a.name);
+    write(a.text);
 
     if (!isNextTokenNewline() and !isNextTokenParenClose()) {
         write(" ");
@@ -159,7 +159,7 @@ fn handleQuotedArg(a: lex.QuotedArg) void {
 }
 
 fn handleBracketedArg(a: lex.BracketedArg) void {
-    write(a.name);
+    write(a.text);
 
     if (!isNextTokenNewline() and !isNextTokenParenClose()) {
         write(" ");
@@ -172,7 +172,7 @@ fn handleComment(a: lex.Comment) void {
     if (!atStartOfLine) {
         write(" ");
     }
-    write(std.mem.trimLeft(u8, a.name, " "));
+    write(std.mem.trimLeft(u8, a.text, " "));
 }
 
 fn handleNewline() void {
@@ -203,7 +203,7 @@ fn handleNewline() void {
     if (indent > 0 and currentTokenIndex.* + 1 < gtokens.items.len) {
         const nextToken = gtokens.items[currentTokenIndex.* + 1];
         const tag = std.meta.activeTag(nextToken);
-        if ((tag == lex.Token.Cmd and isControlStructureEnd(nextToken.Cmd.name)) or isNextTokenParenClose() or isElse()) {
+        if ((tag == lex.Token.Cmd and isControlStructureEnd(nextToken.Cmd.text)) or isNextTokenParenClose() or isElse()) {
             toIndent = indent - 1;
         }
     }

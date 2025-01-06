@@ -1,11 +1,11 @@
 const std = @import("std");
 
-pub const Command = struct { name: []const u8 };
+pub const Command = struct { text: []const u8 };
 pub const Paren = struct { opener: bool };
-pub const UnquotedArg = struct { name: []const u8 };
-pub const QuotedArg = struct { name: []const u8 };
-pub const BracketedArg = struct { name: []const u8 };
-pub const Comment = struct { bracketed: bool, name: []const u8 };
+pub const UnquotedArg = struct { text: []const u8 };
+pub const QuotedArg = struct { text: []const u8 };
+pub const BracketedArg = struct { text: []const u8 };
+pub const Comment = struct { bracketed: bool, text: []const u8 };
 pub const Newline = struct {};
 
 pub const Token = union(enum) {
@@ -19,12 +19,12 @@ pub const Token = union(enum) {
 
     fn text(self: Token) []const u8 {
         return switch (self) {
-            .Cmd => |c| c.name,
+            .Cmd => |c| c.text,
             .Paren => |p| if (p.opener) "(" else ")",
-            .UnquotedArg => |uq| uq.name,
-            .QuotedArg => |q| q.name,
-            .BracketedArg => |b| b.name,
-            .Comment => |c| c.name,
+            .UnquotedArg => |uq| uq.text,
+            .QuotedArg => |q| q.text,
+            .BracketedArg => |b| b.text,
+            .Comment => |c| c.text,
             .Newline => |_| "\n",
         };
     }
@@ -78,7 +78,7 @@ fn readComment(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void
     // bracketed comment
     var j = i.*;
     if (j + 1 < source.len and source[j + 1] == '[') {
-        try tokens.append(Token{ .Comment = Comment{ .bracketed = true, .name = source[j .. j + 1] } });
+        try tokens.append(Token{ .Comment = Comment{ .bracketed = true, .text = source[j .. j + 1] } });
         j += 1;
         try readBracketedArg(source, tokens, &j);
         i.* = j;
@@ -89,7 +89,7 @@ fn readComment(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void
     while (source[j] != '\n') {
         j += 1;
     }
-    try tokens.append(Token{ .Comment = Comment{ .bracketed = false, .name = source[i.*..j] } });
+    try tokens.append(Token{ .Comment = Comment{ .bracketed = false, .text = source[i.*..j] } });
     i.* = j;
 }
 
@@ -114,7 +114,7 @@ fn readBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) 
             const a = j + equalsCount + 1;
             if (equalsCount == numEquals and a < source.len and source[a] == ']') {
                 j = a + 1;
-                try tokens.append(Token{ .BracketedArg = BracketedArg{ .name = source[i.*..j] } });
+                try tokens.append(Token{ .BracketedArg = BracketedArg{ .text = source[i.*..j] } });
                 break;
             }
         }
@@ -142,7 +142,7 @@ fn readQuotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !vo
             '"' => {
                 // end
                 j += 1;
-                try tokens.*.append(Token{ .QuotedArg = QuotedArg{ .name = source[i.*..j] } });
+                try tokens.*.append(Token{ .QuotedArg = QuotedArg{ .text = source[i.*..j] } });
                 break;
             },
             else => {
@@ -184,7 +184,7 @@ fn readUnquotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !
                     continue;
                 }
 
-                try tokens.*.append(Token{ .UnquotedArg = UnquotedArg{ .name = source[i.*..j] } });
+                try tokens.*.append(Token{ .UnquotedArg = UnquotedArg{ .text = source[i.*..j] } });
                 if (source[j] == '\n') {
                     try readNewline(tokens, &j);
                 } else if (source[j] != ')') {
@@ -278,7 +278,7 @@ fn parseCommand(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !voi
         }
     }
 
-    try tokens.*.append(Token{ .Cmd = Command{ .name = source[i.*..j] } });
+    try tokens.*.append(Token{ .Cmd = Command{ .text = source[i.*..j] } });
     i.* = j;
 
     // skip whitespace
@@ -292,7 +292,7 @@ fn parseCommand(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !voi
     i.* = j;
 
     if (source[j] != '(') {
-        std.debug.print("Expected a '(' after command: {s}\n", .{tokens.*.getLast().Cmd.name});
+        std.debug.print("Expected a '(' after command: {s}\n", .{tokens.*.getLast().Cmd.text});
         return error.ParseError;
     }
     try tokens.*.append(Token{ .Paren = Paren{ .opener = true } });
