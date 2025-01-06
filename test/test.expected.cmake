@@ -12,3 +12,14 @@ endif()
 message(STATUS
     "CMake version: ${CMAKE_VERSION}sssssssssssssss dfaskldfj askdfj slkdfj "
 )
+add_executable(hello
+    hello1.c
+    hello2.c
+    hello3.c
+    hello4.c
+    hello5.c
+)
+add_executable(abc
+    abc.1 abc.2
+    abc.3 abc.4
+)

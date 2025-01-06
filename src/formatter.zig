@@ -61,6 +61,19 @@ fn isNextTokenComment() bool {
     return nextToken != null and std.meta.activeTag(nextToken.?) == .Comment;
 }
 
+fn countArgsInLine(fromTokenIndex: u32) u32 {
+    var numArgsInLine: u32 = 0;
+    var j: u32 = fromTokenIndex;
+    while (j < gtokens.items.len) : (j += 1) {
+        switch (gtokens.items[j]) {
+            .UnquotedArg, .QuotedArg, .BracketedArg => numArgsInLine += 1,
+            .Newline => break,
+            else => continue,
+        }
+    }
+    return numArgsInLine;
+}
+
 fn handleCommand(cmd: lex.Command) void {
     write(cmd.text);
 
@@ -70,6 +83,7 @@ fn handleCommand(cmd: lex.Command) void {
     indent += 1;
     // number of new lines that will be found in the block
     var newlines: u32 = 0;
+    var numArgsInLine: u32 = countArgsInLine(currentTokenIndex.* + 1);
 
     while (currentTokenIndex.* < gtokens.items.len) {
         switch (gtokens.items[currentTokenIndex.*]) {
@@ -90,19 +104,20 @@ fn handleCommand(cmd: lex.Command) void {
                     break;
                 }
             },
-            .UnquotedArg => |uq| {
-                handleUnquotedArg(uq);
-            },
-            .QuotedArg => |q| {
-                handleQuotedArg(q);
-            },
-            .BracketedArg => |b| {
-                handleBracketedArg(b);
+            .UnquotedArg, .QuotedArg, .BracketedArg => {
+                write(gtokens.items[currentTokenIndex.*].text());
+                // if there are > 5 args on a line, then split them with newlines
+                if (numArgsInLine > 5 and !isNextTokenNewline()) {
+                    handleNewline();
+                } else if (!isNextTokenNewline() and !isNextTokenParenClose()) {
+                    write(" ");
+                }
             },
             .Comment => |c| handleComment(c),
             .Newline => |_| {
                 handleNewline();
                 newlines += 1;
+                numArgsInLine = countArgsInLine(currentTokenIndex.* + 1);
             },
         }
 
@@ -139,30 +154,6 @@ fn handleParen(a: lex.Paren) void {
         if (!isNextTokenParenClose() and !isNextTokenNewline() and !isNextTokenComment()) {
             write(" ");
         }
-    }
-}
-
-fn handleUnquotedArg(a: lex.UnquotedArg) void {
-    write(a.text);
-
-    if (!isNextTokenNewline() and !isNextTokenParenClose()) {
-        write(" ");
-    }
-}
-
-fn handleQuotedArg(a: lex.QuotedArg) void {
-    write(a.text);
-
-    if (!isNextTokenNewline() and !isNextTokenParenClose()) {
-        write(" ");
-    }
-}
-
-fn handleBracketedArg(a: lex.BracketedArg) void {
-    write(a.text);
-
-    if (!isNextTokenNewline() and !isNextTokenParenClose()) {
-        write(" ");
     }
 }
 

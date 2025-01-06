@@ -17,7 +17,7 @@ pub const Token = union(enum) {
     Comment: Comment,
     Newline: Newline,
 
-    fn text(self: Token) []const u8 {
+    pub fn text(self: Token) []const u8 {
         return switch (self) {
             .Cmd => |c| c.text,
             .Paren => |p| if (p.opener) "(" else ")",
