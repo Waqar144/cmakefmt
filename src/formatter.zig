@@ -95,8 +95,15 @@ fn handleCommand(cmd: lex.Command) void {
                 bracketDepth += if (p.opener) 1 else -1;
 
                 // if the open paren and close isn't on the same line then push it to a newline
-                if (bracketDepth == 0 and !prevTokenIsNewline and !p.opener and newlines > 0)
+                if (bracketDepth == 0 and !prevTokenIsNewline and !p.opener and newlines > 0) {
                     writeln();
+                    // indent as needed
+                    for (0..indent - 1) |_| {
+                        for (0..indentWidth) |_| {
+                            write(" ");
+                        }
+                    }
+                }
 
                 handleParen(p);
 
