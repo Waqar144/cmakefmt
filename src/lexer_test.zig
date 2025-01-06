@@ -21,7 +21,7 @@ test "test full file" {
     };
     defer alloc.free(text);
     var tokens = try lexer.lex(text, alloc);
-    defer tokens.clearAndFree();
+    defer tokens.deinit();
 
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "cmake_minimum_required" } },
@@ -115,14 +115,14 @@ test "test full file" {
 test "empty" {
     const t = std.testing;
     var tokens = try lexer.lex("", t.allocator);
-    defer tokens.clearAndFree();
+    defer tokens.deinit();
     try t.expect(tokens.items.len == 0);
 }
 
 test "test multiple in command" {
     const t = std.testing;
     var tokens = try lexer.lex("cmake_minimum_required(VERSION 3.16 FATAL_ERROR)", t.allocator);
-    defer tokens.clearAndFree();
+    defer tokens.deinit();
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "cmake_minimum_required" } },
         .{ .Paren = .{ .opener = true } },
@@ -137,7 +137,7 @@ test "test multiple in command" {
 test "test multiple parens in command" {
     const t = std.testing;
     var tokens = try lexer.lex("if((CMAKE_CXX_COMPILER_ID STREQUAL \"GNU\") AND (${CMAKE_SYSTEM_NAME} MATCHES \"Linux\"))", t.allocator);
-    defer tokens.clearAndFree();
+    defer tokens.deinit();
 
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "if" } },
@@ -161,7 +161,7 @@ test "test multiple parens in command" {
 test "test escaped unquoted arg" {
     const t = std.testing;
     var tokens = try lexer.lex("set(VAR \\\"\\\")", t.allocator);
-    defer tokens.clearAndFree();
+    defer tokens.deinit();
     //     std.debug.print("{any}\n", .{tokens});
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "set" } },
@@ -183,7 +183,7 @@ test "comment in args" {
 
     const t = std.testing;
     var tokens = try lexer.lex(source, std.testing.allocator);
-    defer tokens.clearAndFree();
+    defer tokens.deinit();
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "if" } },
         .{ .Paren = .{ .opener = true } },
@@ -205,7 +205,7 @@ test "unquoted arg containing quotes" {
     const t = std.testing;
     const source = "execute_process(COMMAND git log -1 --format=%cd --date=format:\"%Y-%m-%d %H:%M:%S\")";
     var tokens = try lexer.lex(source, std.testing.allocator);
-    defer tokens.clearAndFree();
+    defer tokens.deinit();
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "execute_process" } },
         .{ .Paren = .{ .opener = true } },
