@@ -1,5 +1,4 @@
-option(IS_TAGGED_RELEASE_BUILD
-    "Clears the \"Prelease Version\" project description for tagged release builds. Defaults to `false`" OFF)
+option(IS_TAGGED_RELEASE_BUILD "Clears the \"Prelease Version\" project description for tagged release builds. Defaults to `false`" OFF)
 
 
 cmake_policy(SET CMP0012 NEW) # needed for require flags down below

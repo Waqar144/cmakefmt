@@ -110,11 +110,12 @@ fn handleCommand(cmd: lex.Command) void {
 
     currentTokenIndex.* += 1;
     var bracketDepth: i32 = 0;
-    var prevTokenIsNewline = false;
+    var prevWasNewline = false;
     indent += 1;
     // number of new lines that will be found in the block
     var newlines: u32 = 0;
     var numArgsInLine: u32 = countArgsInLine(currentTokenIndex.* + 1);
+    var argTextLen: usize = 0;
 
     while (currentTokenIndex.* < gtokens.items.len) {
         switch (gtokens.items[currentTokenIndex.*]) {
@@ -126,7 +127,7 @@ fn handleCommand(cmd: lex.Command) void {
                 bracketDepth += if (p.opener) 1 else -1;
 
                 // if the open paren and close isn't on the same line then push it to a newline
-                if (bracketDepth == 0 and !prevTokenIsNewline and !p.opener and newlines > 0) {
+                if (bracketDepth == 0 and !prevWasNewline and !p.opener and newlines > 0) {
                     writeln();
                     // indent as needed
                     writeIndent(indent - 1);
@@ -137,6 +138,7 @@ fn handleCommand(cmd: lex.Command) void {
                 if (bracketDepth == 0) {
                     break;
                 }
+                prevWasNewline = false;
             },
             .UnquotedArg, .QuotedArg, .BracketedArg => blk: {
                 const argText = gtokens.items[currentTokenIndex.*].text();
@@ -152,28 +154,39 @@ fn handleCommand(cmd: lex.Command) void {
                     if (found) {
                         var newlinesInserted: bool = false;
                         handleMultiArgs(multiArgsList, &newlinesInserted);
+                        prevWasNewline = newlinesInserted;
                         newlines += if (newlinesInserted) 1 else 0;
                         break :blk;
                     }
                 }
-                write(argText);
 
+                write(argText);
+                argTextLen += argText.len + 1; // 1 for space
+                const nextArgLen = if (currentTokenIndex.* + 1 < gtokens.items.len and !isNextTokenNewline()) peekNext().?.text().len else 0;
+
+                prevWasNewline = false;
                 // if there are > 5 args on a line, then split them with newlines
-                if (numArgsInLine > 5 and !isNextTokenNewline()) {
+                if ((argTextLen + nextArgLen + (indent * indentWidth) > 120) or (numArgsInLine > 5 and !isNextTokenNewline())) {
                     handleNewline();
+                    prevWasNewline = true;
+                    newlines += 1;
+                    argTextLen = 0;
                 } else if (!isNextTokenNewline() and !isNextTokenParenClose()) {
                     write(" ");
                 }
             },
-            .Comment => |c| handleComment(c),
+            .Comment => |c| {
+                prevWasNewline = false;
+                handleComment(c);
+            },
             .Newline => |_| {
                 handleNewline();
+                prevWasNewline = true;
                 newlines += 1;
                 numArgsInLine = countArgsInLine(currentTokenIndex.* + 1);
             },
         }
 
-        prevTokenIsNewline = std.meta.activeTag(gtokens.items[currentTokenIndex.*]) == .Newline;
         currentTokenIndex.* += 1;
     }
 
