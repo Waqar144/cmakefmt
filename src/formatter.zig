@@ -6,6 +6,14 @@ const indentWidth = 4;
 var currentTokenIndex: *u32 = undefined;
 var gtokens: *const std.ArrayList(lex.Token) = undefined;
 var g_outFile: *const std.fs.File = undefined;
+const gCommandMap = std.StaticStringMapWithEql([]const []const u8, std.static_string_map.eqlAsciiIgnoreCase).initComptime(.{
+    .{ "find_package", &.{ "COMPONENTS", "OPTIONAL_COMPONENTS", "NAMES", "CONFIGS", "HINTS", "PATHS", "PATH_SUFFIXES" } },
+    .{ "find_library", &.{ "NAMES", "HINTS", "PATHS", "PATH_SUFFIXES" } },
+});
+
+fn strequal(a: []const u8, b: []const u8) bool {
+    return std.mem.eql(u8, a, b);
+}
 
 fn write(text: []const u8) void {
     _ = g_outFile.write(text) catch |err| {
@@ -15,6 +23,14 @@ fn write(text: []const u8) void {
 
 fn writeln() void {
     write("\n");
+}
+
+fn writeIndent(indent_level: u32) void {
+    for (0..indent_level) |_| {
+        for (0..indentWidth) |_| {
+            write(" ");
+        }
+    }
 }
 
 fn isControlStructureBegin(text: []const u8) bool {
@@ -61,6 +77,18 @@ fn isNextTokenComment() bool {
     return nextToken != null and std.meta.activeTag(nextToken.?) == .Comment;
 }
 
+fn nextArgEquals(text: []const u8) bool {
+    var j = currentTokenIndex.* + 1;
+    while (j < gtokens.items.len) : (j += 1) {
+        switch (gtokens.items[j]) {
+            .UnquotedArg, .QuotedArg, .BracketedArg => return std.mem.eql(u8, text, gtokens.items[j].text()),
+            .Newline => continue,
+            else => return false,
+        }
+    }
+    return false;
+}
+
 fn countArgsInLine(fromTokenIndex: u32) u32 {
     var numArgsInLine: u32 = 0;
     var j: u32 = fromTokenIndex;
@@ -76,6 +104,9 @@ fn countArgsInLine(fromTokenIndex: u32) u32 {
 
 fn handleCommand(cmd: lex.Command) void {
     write(cmd.text);
+
+    const emptyArgs: []const []const u8 = &.{};
+    const multiArgsList = gCommandMap.get(cmd.text) orelse emptyArgs;
 
     currentTokenIndex.* += 1;
     var bracketDepth: i32 = 0;
@@ -98,11 +129,7 @@ fn handleCommand(cmd: lex.Command) void {
                 if (bracketDepth == 0 and !prevTokenIsNewline and !p.opener and newlines > 0) {
                     writeln();
                     // indent as needed
-                    for (0..indent - 1) |_| {
-                        for (0..indentWidth) |_| {
-                            write(" ");
-                        }
-                    }
+                    writeIndent(indent - 1);
                 }
 
                 handleParen(p);
@@ -111,8 +138,26 @@ fn handleCommand(cmd: lex.Command) void {
                     break;
                 }
             },
-            .UnquotedArg, .QuotedArg, .BracketedArg => {
-                write(gtokens.items[currentTokenIndex.*].text());
+            .UnquotedArg, .QuotedArg, .BracketedArg => blk: {
+                const argText = gtokens.items[currentTokenIndex.*].text();
+                var found: bool = false;
+                if (multiArgsList.len != 0) {
+                    for (multiArgsList) |arg| {
+                        if (strequal(arg, argText)) {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (found) {
+                        var newlinesInserted: bool = false;
+                        handleMultiArgs(multiArgsList, &newlinesInserted);
+                        newlines += if (newlinesInserted) 1 else 0;
+                        break :blk;
+                    }
+                }
+                write(argText);
+
                 // if there are > 5 args on a line, then split them with newlines
                 if (numArgsInLine > 5 and !isNextTokenNewline()) {
                     handleNewline();
@@ -146,6 +191,70 @@ fn handleCommand(cmd: lex.Command) void {
             std.process.exit(1);
         }
         indent -= 1;
+    }
+}
+
+fn handleMultiArgs(multiArgsForCommand: []const []const u8, newlinesInserted: *bool) void {
+    var j = currentTokenIndex.*;
+    write(gtokens.items[j].text());
+    j += 1;
+
+    // count multi args
+    var k = j;
+    var numArgsForMultiArg: u32 = 0;
+    out: while (k < gtokens.items.len) : (k += 1) {
+        const arg = gtokens.items[k];
+        switch (arg) {
+            .UnquotedArg, .QuotedArg, .BracketedArg => {
+                for (multiArgsForCommand) |a| {
+                    // Break if we reach another multi arg
+                    if (strequal(a, arg.text())) {
+                        break :out;
+                    }
+                }
+                numArgsForMultiArg += 1;
+            },
+            .Cmd => break,
+            else => continue,
+        }
+    }
+
+    // separate args with newline if there are more than 3 args
+    // TODO: probably account for text length here along with num args
+    const seperateWithNewline = (numArgsForMultiArg > 3);
+
+    if (seperateWithNewline) {
+        newlinesInserted.* = true;
+        write("\n");
+        writeIndent(indent + 1);
+    } else {
+        write(" ");
+    }
+
+    var processed: u32 = 0;
+    while (processed < numArgsForMultiArg) : (j += 1) {
+        const arg = gtokens.items[j];
+        switch (arg) {
+            .UnquotedArg, .QuotedArg, .BracketedArg => {
+                write(arg.text());
+                const isLast = processed + 1 == numArgsForMultiArg;
+                if (seperateWithNewline) {
+                    const increment: u32 = if (isLast) 0 else 1;
+                    write("\n");
+                    writeIndent(indent + increment);
+                } else if (!isLast) {
+                    write(" ");
+                }
+                processed += 1;
+            },
+            else => continue,
+        }
+    }
+
+    currentTokenIndex.* = j - 1;
+
+    if (seperateWithNewline and j < gtokens.items.len and gtokens.items[j].isNewLine()) {
+        currentTokenIndex.* += 1;
     }
 }
 
@@ -206,11 +315,7 @@ fn handleNewline() void {
         }
     }
 
-    for (0..toIndent) |_| {
-        for (0..indentWidth) |_| {
-            write(" ");
-        }
-    }
+    writeIndent(toIndent);
 }
 
 pub fn format(tokens: std.ArrayList(lex.Token)) void {
