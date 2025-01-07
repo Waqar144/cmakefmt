@@ -6,6 +6,7 @@ const indentWidth = 4;
 var currentTokenIndex: *u32 = undefined;
 var gtokens: *const std.ArrayList(lex.Token) = undefined;
 var g_outFile: *const std.fs.File = undefined;
+var prevWasNewline: bool = false;
 const gCommandMap = std.StaticStringMapWithEql([]const []const u8, std.static_string_map.eqlAsciiIgnoreCase).initComptime(.{
     .{ "find_package", &.{ "COMPONENTS", "OPTIONAL_COMPONENTS", "NAMES", "CONFIGS", "HINTS", "PATHS", "PATH_SUFFIXES" } },
     .{ "find_library", &.{ "NAMES", "HINTS", "PATHS", "PATH_SUFFIXES" } },
@@ -19,10 +20,12 @@ fn write(text: []const u8) void {
     _ = g_outFile.write(text) catch |err| {
         std.log.err("Error when writing {s}", .{@errorName(err)});
     };
+    prevWasNewline = std.mem.endsWith(u8, text, "\n");
 }
 
 fn writeln() void {
     write("\n");
+    prevWasNewline = true;
 }
 
 fn writeIndent(indent_level: u32) void {
@@ -110,7 +113,6 @@ fn handleCommand(cmd: lex.Command) void {
 
     currentTokenIndex.* += 1;
     var bracketDepth: i32 = 0;
-    var prevWasNewline = false;
     indent += 1;
     // number of new lines that will be found in the block
     var newlines: u32 = 0;
@@ -138,7 +140,6 @@ fn handleCommand(cmd: lex.Command) void {
                 if (bracketDepth == 0) {
                     break;
                 }
-                prevWasNewline = false;
             },
             .UnquotedArg, .QuotedArg, .BracketedArg => blk: {
                 const argText = gtokens.items[currentTokenIndex.*].text();
@@ -154,7 +155,6 @@ fn handleCommand(cmd: lex.Command) void {
                     if (found) {
                         var newlinesInserted: bool = false;
                         handleMultiArgs(multiArgsList, &newlinesInserted);
-                        prevWasNewline = newlinesInserted;
                         newlines += if (newlinesInserted) 1 else 0;
                         break :blk;
                     }
@@ -164,11 +164,9 @@ fn handleCommand(cmd: lex.Command) void {
                 argTextLen += argText.len + 1; // 1 for space
                 const nextArgLen = if (currentTokenIndex.* + 1 < gtokens.items.len and !isNextTokenNewline()) peekNext().?.text().len else 0;
 
-                prevWasNewline = false;
                 // if there are > 5 args on a line, then split them with newlines
                 if ((argTextLen + nextArgLen + (indent * indentWidth) > 120) or (numArgsInLine > 5 and !isNextTokenNewline())) {
                     handleNewline();
-                    prevWasNewline = true;
                     newlines += 1;
                     argTextLen = 0;
                 } else if (!isNextTokenNewline() and !isNextTokenParenClose()) {
@@ -176,12 +174,10 @@ fn handleCommand(cmd: lex.Command) void {
                 }
             },
             .Comment => |c| {
-                prevWasNewline = false;
                 handleComment(c);
             },
             .Newline => |_| {
                 handleNewline();
-                prevWasNewline = true;
                 newlines += 1;
                 numArgsInLine = countArgsInLine(currentTokenIndex.* + 1);
             },
