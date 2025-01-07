@@ -7,9 +7,37 @@ var currentTokenIndex: *u32 = undefined;
 var gtokens: *const std.ArrayList(lex.Token) = undefined;
 var g_outFile: *const std.fs.File = undefined;
 var prevWasNewline: bool = false;
-const gCommandMap = std.StaticStringMapWithEql([]const []const u8, std.static_string_map.eqlAsciiIgnoreCase).initComptime(.{
-    .{ "find_package", &.{ "COMPONENTS", "OPTIONAL_COMPONENTS", "NAMES", "CONFIGS", "HINTS", "PATHS", "PATH_SUFFIXES" } },
-    .{ "find_library", &.{ "NAMES", "HINTS", "PATHS", "PATH_SUFFIXES" } },
+
+const emptyArgs: []const []const u8 = &.{};
+
+const CommandKeywords = struct {
+    /// multi value keywords
+    multi: []const []const u8,
+    /// flag or single value
+    keywords: []const []const u8 = &.{},
+
+    fn hasMultiArgKeyword(self: CommandKeywords, word: []const u8) bool {
+        for (self.multi) |k| if (strequal(k, word)) return true;
+        return false;
+    }
+
+    fn contains(self: CommandKeywords, word: []const u8) bool {
+        for (self.multi) |k| if (strequal(k, word)) return true;
+        for (self.keywords) |k| if (strequal(k, word)) return true;
+        return false;
+    }
+};
+
+const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_string_map.eqlAsciiIgnoreCase).initComptime(.{
+    .{ "find_package", .{
+        .multi = &.{ "COMPONENTS", "OPTIONAL_COMPONENTS", "NAMES", "CONFIGS", "HINTS", "PATHS", "PATH_SUFFIXES" },
+        .keywords = &.{ "EXACT", "QUIET", "MODULE", "CONFIG", "NO_MODULE", "NO_POLICY_SCOPE", "NO_DEFAULT_PATH", "NO_PACKAGE_ROOT_PATH", "NO_CMAKE_PATH", "NO_CMAKE_ENVIRONMENT_PATH", "NO_SYSTEM_ENVIRONMENT_PATH", "NO_CMAKE_PACKAGE_REGISTRY", "NO_CMAKE_BUILDS_PATH", "NO_CMAKE_SYSTEM_PATH", "NO_CMAKE_SYSTEM_PACKAGE_REGISTRY", "CMAKE_FIND_ROOT_PATH_BOTH", "ONLY_CMAKE_FIND_ROOT_PATH", "NO_CMAKE_FIND_ROOT_PATH", "NO_CMAKE_INSTALL_PREFIX", "GLOBAL" },
+    } },
+
+    .{ "find_library", .{
+        .multi = &.{ "NAMES", "HINTS", "PATHS", "PATH_SUFFIXES", "DOC", "ENV", "VALIDATOR" },
+        .keywords = &.{ "NAMES_PER_DIR", "NO_DEFAULT_PATH", "NO_PACKAGE_ROOT_PATH", "NO_CMAKE_PATH", "NO_CMAKE_ENVIRONMENT_PATH", "NO_SYSTEM_ENVIRONMENT_PATH", "NO_CMAKE_SYSTEM_PATH", "CMAKE_FIND_ROOT_PATH_BOTH", "ONLY_CMAKE_FIND_ROOT_PATH", "NO_CMAKE_FIND_ROOT_PATH", "REQUIRED", "NO_CMAKE_INSTALL_PREFIX" },
+    } },
 });
 
 fn strequal(a: []const u8, b: []const u8) bool {
@@ -108,8 +136,7 @@ fn countArgsInLine(fromTokenIndex: u32) u32 {
 fn handleCommand(cmd: lex.Command) void {
     write(cmd.text);
 
-    const emptyArgs: []const []const u8 = &.{};
-    const multiArgsList = gCommandMap.get(cmd.text) orelse emptyArgs;
+    const maybeCommandKeywords = gCommandMap.get(cmd.text);
 
     currentTokenIndex.* += 1;
     var bracketDepth: i32 = 0;
@@ -143,18 +170,10 @@ fn handleCommand(cmd: lex.Command) void {
             },
             .UnquotedArg, .QuotedArg, .BracketedArg => blk: {
                 const argText = gtokens.items[currentTokenIndex.*].text();
-                var found: bool = false;
-                if (multiArgsList.len != 0) {
-                    for (multiArgsList) |arg| {
-                        if (strequal(arg, argText)) {
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    if (found) {
+                if (maybeCommandKeywords) |commandKeywords| {
+                    if (commandKeywords.hasMultiArgKeyword(argText)) {
                         var newlinesInserted: bool = false;
-                        handleMultiArgs(multiArgsList, &newlinesInserted);
+                        handleMultiArgs(commandKeywords, &newlinesInserted);
                         newlines += if (newlinesInserted) 1 else 0;
                         break :blk;
                     }
@@ -203,7 +222,7 @@ fn handleCommand(cmd: lex.Command) void {
     }
 }
 
-fn handleMultiArgs(multiArgsForCommand: []const []const u8, newlinesInserted: *bool) void {
+fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) void {
     var j = currentTokenIndex.*;
     write(gtokens.items[j].text());
     j += 1;
@@ -211,16 +230,12 @@ fn handleMultiArgs(multiArgsForCommand: []const []const u8, newlinesInserted: *b
     // count multi args
     var k = j;
     var numArgsForMultiArg: u32 = 0;
-    out: while (k < gtokens.items.len) : (k += 1) {
+    while (k < gtokens.items.len) : (k += 1) {
         const arg = gtokens.items[k];
         switch (arg) {
             .UnquotedArg, .QuotedArg, .BracketedArg => {
-                for (multiArgsForCommand) |a| {
-                    // Break if we reach another multi arg
-                    if (strequal(a, arg.text())) {
-                        break :out;
-                    }
-                }
+                if (commandKeywords.contains(arg.text()))
+                    break;
                 numArgsForMultiArg += 1;
             },
             .Cmd => break,
