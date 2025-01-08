@@ -25,3 +25,12 @@ find_package(FOO 1.23 EXACT QUIET MODULE REQUIRED COMPONENTS foo bar OPTIONAL_CO
 find_package(FOO 1.23 EXACT QUIET REQUIRED foo bar OPTIONAL_COMPONENTS foo bar CONFIG NO_POLICY_SCOPE NAMES foo bar CONFIGS foo bar HINTS foo bar PATHS foo bar PATH_SUFFIXES foo bar NO_DEFAULT_PATH NO_PACKAGE_ROOT_PATH NO_CMAKE_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_PACKAGE_REGISTRY NO_CMAKE_BUILDS_PATH NO_CMAKE_SYSTEM_PATH NO_CMAKE_SYSTEM_PACKAGE_REGISTRY CMAKE_FIND_ROOT_PATH_BOTH)
 # not great currently, but just hand format it a bit for clarity
 if(NOT(-1 EQUAL (${v}))AND(1 EQUAL 1))
+endif()
+
+set(SOME_FORMATTED_PYTHON_CODE [=[
+def foo(bar, baz):
+    for i, j in zip(bar, baz):
+        print(i, j)
+    print("DONE")
+]=])
+set(OTHER_FORMATTED_PYTHON_CODE [=[Foo = lambda Bar: Bar.something_to_be_done_on_Bar_object()]=])
