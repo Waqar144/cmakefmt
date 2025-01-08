@@ -349,6 +349,8 @@ fn handleNewline() void {
         if ((tag == lex.Token.Cmd and isControlStructureEnd(nextToken.Cmd.text)) or isNextTokenParenClose() or isElse()) {
             toIndent = indent - 1;
         }
+    } else if (currentTokenIndex.* + 1 >= gtokens.items.len) {
+        return;
     }
 
     writeIndent(toIndent);
