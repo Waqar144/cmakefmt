@@ -219,3 +219,40 @@ test "unquoted arg containing quotes" {
     };
     try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
+
+test "open paren after unquoted arg" {
+    const t = std.testing;
+    const source = "if(NOT(-1 EQUAL (${v})))";
+    var tokens = try lexer.lex(source, std.testing.allocator);
+    defer tokens.deinit();
+    const expectedTokens = [_]lexer.Token{
+        .{ .Cmd = .{ .text = "if" } },
+        .{ .Paren = .{ .opener = true } },
+        .{ .UnquotedArg = .{ .text = "NOT" } },
+        .{ .Paren = .{ .opener = true } },
+        .{ .UnquotedArg = .{ .text = "-1" } },
+        .{ .UnquotedArg = .{ .text = "EQUAL" } },
+        .{ .Paren = .{ .opener = true } },
+        .{ .UnquotedArg = .{ .text = "${v}" } },
+        .{ .Paren = .{ .opener = false } },
+        .{ .Paren = .{ .opener = false } },
+        .{ .Paren = .{ .opener = false } },
+    };
+    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+}
+
+test "comment after unquoted arg" {
+    const t = std.testing;
+    const source = "if(VAR#comment\n)";
+    var tokens = try lexer.lex(source, std.testing.allocator);
+    defer tokens.deinit();
+    const expectedTokens = [_]lexer.Token{
+        .{ .Cmd = .{ .text = "if" } },
+        .{ .Paren = .{ .opener = true } },
+        .{ .UnquotedArg = .{ .text = "VAR" } },
+        .{ .Comment = .{ .bracketed = false, .text = "#comment" } },
+        .{ .Newline = .{} },
+        .{ .Paren = .{ .opener = false } },
+    };
+    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+}

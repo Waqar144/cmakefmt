@@ -173,9 +173,10 @@ fn handleCommand(cmd: lex.Command) void {
                 if (maybeCommandKeywords) |commandKeywords| {
                     if (commandKeywords.hasMultiArgKeyword(argText)) {
                         var newlinesInserted: bool = false;
-                        handleMultiArgs(commandKeywords, &newlinesInserted);
-                        newlines += if (newlinesInserted) 1 else 0;
-                        break :blk;
+                        if (handleMultiArgs(commandKeywords, &newlinesInserted)) {
+                            newlines += if (newlinesInserted) 1 else 0;
+                            break :blk;
+                        }
                     }
                 }
 
@@ -199,6 +200,7 @@ fn handleCommand(cmd: lex.Command) void {
                 handleNewline();
                 newlines += 1;
                 numArgsInLine = countArgsInLine(currentTokenIndex.* + 1);
+                argTextLen = 0;
             },
         }
 
@@ -222,13 +224,9 @@ fn handleCommand(cmd: lex.Command) void {
     }
 }
 
-fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) void {
-    var j = currentTokenIndex.*;
-    write(gtokens.items[j].text());
-    j += 1;
-
+fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) bool {
     // count multi args
-    var k = j;
+    var k = currentTokenIndex.* + 1;
     var numArgsForMultiArg: u32 = 0;
     while (k < gtokens.items.len) : (k += 1) {
         const arg = gtokens.items[k];
@@ -242,6 +240,15 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) vo
             else => continue,
         }
     }
+
+    // there are no values, return now and let the generic handler handle this arg
+    if (numArgsForMultiArg == 0) {
+        return false;
+    }
+
+    var j = currentTokenIndex.*;
+    write(gtokens.items[j].text());
+    j += 1;
 
     // separate args with newline if there are more than 3 args
     // TODO: probably account for text length here along with num args
@@ -284,6 +291,7 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) vo
         write("\n");
         writeIndent(indent);
     }
+    return true;
 }
 
 fn handleParen(a: lex.Paren) void {
