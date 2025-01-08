@@ -58,6 +58,44 @@ const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_strin
         .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE", "LINK_PUBLIC", "LINK_PRIVATE", "LINK_INTERFACE_LIBRARIES" },
         .keywords = emptyArgs,
     } },
+
+    // target_compile_definitions
+    .{ "target_compile_definitions", .{
+        .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" },
+        .keywords = emptyArgs,
+    } },
+
+    // target_precompile_headers
+    .{ "target_precompile_headers", .{
+        .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" },
+        .keywords = emptyArgs,
+    } },
+
+    // target_include_directories
+    .{ "target_include_directories", .{
+        .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" },
+        .keywords = emptyArgs,
+    } },
+
+    // target_include_options
+    .{ "target_include_options", .{
+        .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" },
+        .keywords = emptyArgs,
+    } },
+
+    // 3rdparty stuff
+
+    // ecm_generate_headers
+    .{ "ecm_generate_headers", .{
+        .multi = &.{ "HEADER_NAMES", "PREFIX", "RELATIVE", "REQUIRED_HEADERS" },
+        .keywords = emptyArgs,
+    } },
+
+    // ecm_generate_export_header
+    .{ "ecm_generate_export_header", .{
+        .multi = &.{ "BASE_NAME", "GROUP_BASE_NAME", "VERSION", "DEPRECATED_BASE_VERSION", "DEPRECATION_VERSIONS", "EXCLUDE_DEPRECATED_BEFORE_AND_AT" },
+        .keywords = &.{"USE_VERSION_HEADER"},
+    } },
 });
 
 fn strequal(a: []const u8, b: []const u8) bool {

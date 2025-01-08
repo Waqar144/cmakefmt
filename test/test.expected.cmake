@@ -123,3 +123,27 @@ target_link_libraries(target
         lib6
         lib7
 )
+ecm_generate_headers(KTextEditor_CamelCase_HEADERS
+    HEADER_NAMES
+        AnnotationInterface
+        CodeCompletionModelControllerInterface
+        MovingCursor
+        Range
+        LineRange
+        TextHintInterface
+        Cursor
+        InlineNote
+        InlineNoteProvider
+    PREFIX KTextEditor
+    RELATIVE ktexteditor
+    REQUIRED_HEADERS KTEXTEDITOR_PUBLIC_HEADERS
+)
+ecm_generate_export_header(KF6TextEditor
+    BASE_NAME KTextEditor
+    GROUP_BASE_NAME KF
+    VERSION ${KF_VERSION}
+    USE_VERSION_HEADER
+    DEPRECATED_BASE_VERSION 0
+    DEPRECATION_VERSIONS 6.9
+    EXCLUDE_DEPRECATED_BEFORE_AND_AT ${EXCLUDE_DEPRECATED_BEFORE_AND_AT}
+)

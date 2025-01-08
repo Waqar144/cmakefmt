@@ -37,3 +37,14 @@ set(OTHER_FORMATTED_PYTHON_CODE [=[Foo = lambda Bar: Bar.something_to_be_done_on
 build_command(FOO CONFIGURATION BAR TARGET BAZ PROJECT_NAME QUX)
 find_program(FOO NAMES name1 NAMES_PER_DIR HINTS path1 PATHS path1 p2 PATH_SUFFIXES s1 s2 NO_CMAKE_FIND_ROOT_PATH)
 target_link_libraries(target PUBLIC lib1 lib2 lib3 fff PRIVATE lib4 lib5 lib6 lib7)
+ecm_generate_headers(KTextEditor_CamelCase_HEADERS
+  HEADER_NAMES
+  AnnotationInterface CodeCompletionModelControllerInterface MovingCursor Range LineRange TextHintInterface
+  Cursor InlineNote InlineNoteProvider
+  PREFIX KTextEditor RELATIVE ktexteditor REQUIRED_HEADERS KTEXTEDITOR_PUBLIC_HEADERS)
+ecm_generate_export_header(KF6TextEditor
+    BASE_NAME KTextEditor GROUP_BASE_NAME KF VERSION ${KF_VERSION}
+    USE_VERSION_HEADER
+    DEPRECATED_BASE_VERSION 0 DEPRECATION_VERSIONS 6.9
+    EXCLUDE_DEPRECATED_BEFORE_AND_AT ${EXCLUDE_DEPRECATED_BEFORE_AND_AT}
+)
