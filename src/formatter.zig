@@ -277,8 +277,12 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) vo
 
     currentTokenIndex.* = j - 1;
 
-    if (seperateWithNewline and j < gtokens.items.len and gtokens.items[j].isNewLine()) {
+    // skip newline if next token is newline because we already inserted a newline
+    if (seperateWithNewline and isNextTokenNewline()) {
         currentTokenIndex.* += 1;
+    } else if (!seperateWithNewline and !isNextTokenNewline() and !isNextTokenParenClose()) {
+        write("\n");
+        writeIndent(indent);
     }
 }
 
