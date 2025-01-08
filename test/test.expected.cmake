@@ -103,3 +103,11 @@ build_command(FOO
     TARGET BAZ
     PROJECT_NAME QUX
 )
+find_program(FOO
+    NAMES name1
+    NAMES_PER_DIR
+    HINTS path1
+    PATHS path1 p2
+    PATH_SUFFIXES s1 s2
+    NO_CMAKE_FIND_ROOT_PATH
+)
