@@ -81,3 +81,9 @@ find_package(FOO
     NO_CMAKE_SYSTEM_PACKAGE_REGISTRY
     CMAKE_FIND_ROOT_PATH_BOTH
 )
+# not great currently, but just hand format it a bit for clarity
+if(NOT(-1
+    EQUAL(${v})) AND(1
+    EQUAL
+    1)
+)

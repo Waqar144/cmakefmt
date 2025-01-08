@@ -98,6 +98,11 @@ fn isNextTokenNewline() bool {
     return nextToken != null and nextToken.?.isNewLine();
 }
 
+fn isNextTokenParen() bool {
+    const nextToken = peekNext();
+    return nextToken != null and std.meta.activeTag(nextToken.?) == .Paren;
+}
+
 fn isNextTokenParenClose() bool {
     const nextToken = peekNext();
     return nextToken != null and std.meta.activeTag(nextToken.?) == .Paren and !nextToken.?.Paren.opener;
@@ -185,11 +190,11 @@ fn handleCommand(cmd: lex.Command) void {
                 const nextArgLen = if (currentTokenIndex.* + 1 < gtokens.items.len and !isNextTokenNewline()) peekNext().?.text().len else 0;
 
                 // if there are > 5 args on a line, then split them with newlines
-                if ((argTextLen + nextArgLen + (indent * indentWidth) > 120) or (numArgsInLine > 5 and !isNextTokenNewline())) {
+                if ((argTextLen + nextArgLen + (indent * indentWidth) > 120 or numArgsInLine > 5) and !isNextTokenNewline() and !isNextTokenParen()) {
                     handleNewline();
                     newlines += 1;
                     argTextLen = 0;
-                } else if (!isNextTokenNewline() and !isNextTokenParenClose()) {
+                } else if (!isNextTokenNewline() and !isNextTokenParen()) {
                     write(" ");
                 }
             },
