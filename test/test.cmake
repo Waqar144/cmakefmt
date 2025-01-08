@@ -36,3 +36,4 @@ def foo(bar, baz):
 set(OTHER_FORMATTED_PYTHON_CODE [=[Foo = lambda Bar: Bar.something_to_be_done_on_Bar_object()]=])
 build_command(FOO CONFIGURATION BAR TARGET BAZ PROJECT_NAME QUX)
 find_program(FOO NAMES name1 NAMES_PER_DIR HINTS path1 PATHS path1 p2 PATH_SUFFIXES s1 s2 NO_CMAKE_FIND_ROOT_PATH)
+target_link_libraries(target PUBLIC lib1 lib2 lib3 fff PRIVATE lib4 lib5 lib6 lib7)

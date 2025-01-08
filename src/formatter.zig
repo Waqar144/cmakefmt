@@ -52,6 +52,12 @@ const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_strin
         .multi = &.{ "NAMES", "NAMES_PER_DIR", "HINTS", "PATHS", "PATH_SUFFIXES", "DOC", "ENV", "VALIDATOR", "REGISTRY_VIEW" },
         .keywords = &.{ "NO_CACHE", "REQUIRED", "NO_DEFAULT_PATH", "NO_PACKAGE_ROOT_PATH", "NO_CMAKE_PATH", "NO_CMAKE_ENVIRONMENT_PATH", "NO_SYSTEM_ENVIRONMENT_PATH", "NO_CMAKE_SYSTEM_PATH", "NO_CMAKE_INSTALL_PREFIX", "CMAKE_FIND_ROOT_PATH_BOTH", "ONLY_CMAKE_FIND_ROOT_PATH", "NO_CMAKE_FIND_ROOT_PATH" },
     } },
+
+    // target_link_libraries
+    .{ "target_link_libraries", .{
+        .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE", "LINK_PUBLIC", "LINK_PRIVATE", "LINK_INTERFACE_LIBRARIES" },
+        .keywords = emptyArgs,
+    } },
 });
 
 fn strequal(a: []const u8, b: []const u8) bool {
@@ -288,10 +294,9 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) bo
             .UnquotedArg, .QuotedArg, .BracketedArg => {
                 write(arg.text());
                 const isLast = processed + 1 == numArgsForMultiArg;
-                if (seperateWithNewline) {
-                    const increment: u32 = if (isLast) 0 else 1;
+                if (!isLast and seperateWithNewline) {
                     write("\n");
-                    writeIndent(indent + increment);
+                    writeIndent(indent + 1);
                 } else if (!isLast) {
                     write(" ");
                 }
@@ -303,10 +308,7 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) bo
 
     currentTokenIndex.* = j - 1;
 
-    // skip newline if next token is newline because we already inserted a newline
-    if (seperateWithNewline and isNextTokenNewline()) {
-        currentTokenIndex.* += 1;
-    } else if (!seperateWithNewline and !isNextTokenNewline() and !isNextTokenParenClose()) {
+    if (!isNextTokenNewline() and !isNextTokenParenClose()) {
         write("\n");
         writeIndent(indent);
     }

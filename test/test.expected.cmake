@@ -111,3 +111,15 @@ find_program(FOO
     PATH_SUFFIXES s1 s2
     NO_CMAKE_FIND_ROOT_PATH
 )
+target_link_libraries(target
+    PUBLIC
+        lib1
+        lib2
+        lib3
+        fff
+    PRIVATE
+        lib4
+        lib5
+        lib6
+        lib7
+)
