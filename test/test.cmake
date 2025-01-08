@@ -34,3 +34,4 @@ def foo(bar, baz):
     print("DONE")
 ]=])
 set(OTHER_FORMATTED_PYTHON_CODE [=[Foo = lambda Bar: Bar.something_to_be_done_on_Bar_object()]=])
+build_command(FOO CONFIGURATION BAR TARGET BAZ PROJECT_NAME QUX)
