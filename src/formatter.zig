@@ -1,11 +1,12 @@
 const std = @import("std");
 const lex = @import("lexer.zig");
+const Options = @import("args.zig").Options;
 
 var indent: u32 = 0;
 const indentWidth = 4;
 var currentTokenIndex: *u32 = undefined;
 var gtokens: *const std.ArrayList(lex.Token) = undefined;
-var g_outFile: *const std.fs.File = undefined;
+var gOutBuffer: *std.ArrayList(u8) = undefined;
 var prevWasNewline: bool = false;
 
 const emptyArgs: []const []const u8 = &.{};
@@ -103,7 +104,7 @@ fn strequal(a: []const u8, b: []const u8) bool {
 }
 
 fn write(text: []const u8) void {
-    _ = g_outFile.write(text) catch |err| {
+    _ = gOutBuffer.appendSlice(text) catch |err| {
         std.log.err("Error when writing {s}", .{@errorName(err)});
     };
     prevWasNewline = std.mem.endsWith(u8, text, "\n");
@@ -415,13 +416,18 @@ fn handleNewline() void {
     writeIndent(toIndent);
 }
 
-pub fn format(tokens: std.ArrayList(lex.Token)) void {
+pub fn format(tokens: std.ArrayList(lex.Token), inFileSize: usize, options: Options) void {
     var i: u32 = 0;
     currentTokenIndex = &i;
     gtokens = &tokens;
 
-    const stdout = std.io.getStdOut();
-    g_outFile = &stdout;
+    // Write formatted text to a buffer
+    var formattedText = std.ArrayList(u8).initCapacity(tokens.allocator, inFileSize + (inFileSize / 2)) catch |err| {
+        std.log.err("Failed to allocate buffer. Error: {s}\n", .{@errorName(err)});
+        std.process.exit(1);
+    };
+    defer formattedText.deinit();
+    gOutBuffer = &formattedText;
 
     while (i < tokens.items.len) {
         const token = tokens.items[i];
@@ -437,5 +443,22 @@ pub fn format(tokens: std.ArrayList(lex.Token)) void {
         }
 
         i += 1;
+    }
+
+    if (!options.inplace) {
+        // Write out to stdout
+        _ = std.io.getStdOut().writeAll(formattedText.items) catch |e| {
+            std.log.err("Failed to write. Error: {s}\n", .{@errorName(e)});
+        };
+    } else {
+        // Write to given file
+        const file = std.fs.cwd().createFile(options.filename, .{}) catch |e| {
+            std.log.err("Failed to open file for writing. Error: {s}\n", .{@errorName(e)});
+            std.process.exit(1);
+        };
+        _ = file.writeAll(formattedText.items) catch |e| {
+            std.log.err("Failed to write. Error: {s}\n", .{@errorName(e)});
+            std.process.exit(1);
+        };
     }
 }

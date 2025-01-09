@@ -1,6 +1,7 @@
 const std = @import("std");
 const lexer = @import("lexer.zig");
 const formatter = @import("formatter.zig");
+const args = @import("args.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{ .thread_safe = false }){};
@@ -11,24 +12,14 @@ pub fn main() !void {
     const allocator = arena.allocator();
 
     var argsIt = try std.process.argsWithAllocator(allocator);
-    var args = std.ArrayList([]const u8).init(allocator);
-    while (argsIt.next()) |arg| {
-        const a: []const u8 = arg;
-        try args.append(a);
-    }
+    const options = args.parseArgs(&argsIt);
 
-    if (args.items.len < 2) {
+    if (options.filename.len == 0) {
         std.log.err("Please pass path to a cmake file", .{});
         return;
     }
 
-    if (false) {
-        for (args.items) |arg| {
-            std.debug.print("{s}\n", .{arg});
-        }
-    }
-
-    const file = std.fs.cwd().openFile(args.items[1], .{ .mode = .read_only }) catch |err| {
+    const file = std.fs.cwd().openFile(options.filename, .{ .mode = .read_only }) catch |err| {
         std.log.err("{s}", .{@errorName(err)});
         return;
     };
@@ -40,7 +31,7 @@ pub fn main() !void {
     };
 
     const tokens = try lexer.lex(buf, allocator);
-    formatter.format(tokens);
+    formatter.format(tokens, buf.len, options);
 }
 
 test {
