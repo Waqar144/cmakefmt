@@ -53,8 +53,7 @@ fn isEscapeSequence(source: []const u8, i: u32) bool {
     std.debug.assert(source[i] == '\\');
     if (i + 1 < source.len) {
         return switch (source[i + 1]) {
-            'r', 't', 'n' => true,
-            ';' => true,
+            'r', 't', 'n', ';' => true,
             else => !std.ascii.isAlphanumeric(source[i + 1]),
         };
     }
@@ -62,7 +61,7 @@ fn isEscapeSequence(source: []const u8, i: u32) bool {
 }
 
 fn readNewline(tokens: *std.ArrayList(Token), i: *u32) !void {
-    try tokens.append(Token{ .Newline = Newline{} });
+    try tokens.append(Token{ .Newline = .{} });
     i.* += 1;
 }
 
@@ -74,7 +73,7 @@ fn readComment(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void
     // bracketed comment
     var j = i.*;
     if (j + 1 < source.len and source[j + 1] == '[') {
-        try tokens.append(Token{ .Comment = Comment{ .bracketed = true, .text = source[j .. j + 1] } });
+        try tokens.append(Token{ .Comment = .{ .bracketed = true, .text = source[j .. j + 1] } });
         j += 1;
         try readBracketedArg(source, tokens, &j);
         i.* = j;
@@ -85,7 +84,7 @@ fn readComment(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void
     while (source[j] != '\n') {
         j += 1;
     }
-    try tokens.append(Token{ .Comment = Comment{ .bracketed = false, .text = source[i.*..j] } });
+    try tokens.append(Token{ .Comment = .{ .bracketed = false, .text = source[i.*..j] } });
     i.* = j;
 }
 
@@ -110,7 +109,7 @@ fn readBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) 
             const a = j + equalsCount + 1;
             if (equalsCount == numEquals and a < source.len and source[a] == ']') {
                 j = a + 1;
-                try tokens.append(Token{ .BracketedArg = BracketedArg{ .text = source[i.*..j] } });
+                try tokens.append(Token{ .BracketedArg = .{ .text = source[i.*..j] } });
                 break;
             }
         }
@@ -138,7 +137,7 @@ fn readQuotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !vo
             '"' => {
                 // end
                 j += 1;
-                try tokens.*.append(Token{ .QuotedArg = QuotedArg{ .text = source[i.*..j] } });
+                try tokens.*.append(Token{ .QuotedArg = .{ .text = source[i.*..j] } });
                 break;
             },
             else => {
@@ -177,7 +176,7 @@ fn readUnquotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !
                     continue;
                 }
 
-                try tokens.*.append(Token{ .UnquotedArg = UnquotedArg{ .text = source[i.*..j] } });
+                try tokens.*.append(Token{ .UnquotedArg = .{ .text = source[i.*..j] } });
                 if (source[j] == '\n') {
                     try readNewline(tokens, &j);
                 } else if (source[j] != '(' and source[j] != ')' and source[j] != '#') {
@@ -231,11 +230,11 @@ fn parseArgs(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void {
             }
             parenDepth -= 1;
             j += 1;
-            try tokens.*.append(Token{ .Paren = Paren{ .opener = false } });
+            try tokens.*.append(Token{ .Paren = .{ .opener = false } });
         } else if (source[j] == '(') {
             parenDepth += 1;
             j += 1;
-            try tokens.*.append(Token{ .Paren = Paren{ .opener = true } });
+            try tokens.*.append(Token{ .Paren = .{ .opener = true } });
         }
         // read quoted arg
         else if (source[j] == '\"') {
@@ -271,7 +270,7 @@ fn parseCommand(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !voi
         }
     }
 
-    try tokens.*.append(Token{ .Cmd = Command{ .text = source[i.*..j] } });
+    try tokens.*.append(Token{ .Cmd = .{ .text = source[i.*..j] } });
     i.* = j;
 
     // skip whitespace
@@ -288,7 +287,7 @@ fn parseCommand(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !voi
         std.debug.print("Expected a '(' after command: {s}\n", .{tokens.*.getLast().Cmd.text});
         return error.ParseError;
     }
-    try tokens.*.append(Token{ .Paren = Paren{ .opener = true } });
+    try tokens.*.append(Token{ .Paren = .{ .opener = true } });
     j += 1;
 
     try parseArgs(source, tokens, &j);
@@ -298,7 +297,7 @@ fn parseCommand(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !voi
         return error.ParseError;
     }
 
-    try tokens.*.append(Token{ .Paren = Paren{ .opener = false } });
+    try tokens.*.append(Token{ .Paren = .{ .opener = false } });
     j += 1;
 
     i.* = j;
