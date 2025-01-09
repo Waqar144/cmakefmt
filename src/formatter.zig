@@ -61,10 +61,28 @@ const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_strin
     .{ "target_include_directories", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .keywords = emptyArgs } },
     // target_include_options
     .{ "target_include_options", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .keywords = emptyArgs } },
+    // target_compile_features
+    .{ "target_compile_features", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .keywords = emptyArgs } },
+    // target_compile_options
+    .{ "target_compile_options", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .keywords = emptyArgs } },
     // set_target_properties
     .{ "set_target_properties", .{ .multi = &.{"PROPERTIES"}, .keywords = emptyArgs } },
+    // set_directory_properties
+    .{ "set_directory_properties", .{ .multi = &.{"PROPERTIES"}, .keywords = emptyArgs } },
     // set_tests_properties
     .{ "set_tests_properties", .{ .multi = &.{ "PROPERTIES", "DIRECTORY" }, .keywords = emptyArgs } },
+    // set_source_files_properties
+    .{ "set_source_files_properties", .{ .multi = &.{ "PROPERTIES", "DIRECTORY", "TARGET_DIRECTORY" }, .keywords = emptyArgs } },
+    // add_custom_target
+    .{ "add_custom_target", .{
+        .multi = &.{ "COMMAND", "DEPENDS", "BYPRODUCTS", "WORKING_DIRECTORY", "COMMENT", "JOB_POOL", "JOB_SERVER_AWARE", "SOURCES" },
+        .keywords = &.{ "ALL", "COMMAND_EXPAND_LISTS", "VERBATIM", "USES_TERMINAL" },
+    } },
+    // add_custom_command
+    .{ "add_custom_command", .{
+        .multi = &.{ "TARGET", "OUTPUT", "COMMAND", "ARGS", "DEPENDS", "BYPRODUCTS", "IMPLICIT_DEPENDS", "OUTPUT", "MAIN_DEPENDENCY", "WORKING_DIRECTORY", "COMMENT", "DEPFILE", "JOB_POOL", "JOB_SERVER_AWARE" },
+        .keywords = &.{ "VERBATIM", "APPEND", "USES_TERMINAL", "COMMAND_EXPAND_LISTS", "DEPENDS_EXPLICIT_ONLY", "CODEGEN", "PRE_BUILD", "PRE_LINK", "POST_BUILD" },
+    } },
 
     // 3rdparty stuff
 
