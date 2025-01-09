@@ -1,5 +1,20 @@
 const std = @import("std");
 
+pub fn printHelp() !void {
+    _ = try std.io.getStdOut().writeAll(
+        \\Usage:
+        \\
+        \\Overwrite the given file:
+        \\    cmakefmt -i CMakeLists.txt
+        \\
+        \\Write to stdout:
+        \\    cmakefmt CMakeLists.txt
+        \\
+        \\ -i   Overwite the given file (inplace formatting)
+        \\
+    );
+}
+
 pub const Options = struct {
     inplace: bool,
     filename: []const u8,

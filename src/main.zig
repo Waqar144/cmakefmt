@@ -16,6 +16,7 @@ pub fn main() !void {
 
     if (options.filename.len == 0) {
         std.log.err("Please pass path to a cmake file", .{});
+        try args.printHelp();
         return;
     }
 
