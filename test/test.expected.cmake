@@ -181,6 +181,7 @@ add_custom_command(
         another_arg_to_foo_command
     COMMAND BAZ
 )
+
 add_test(NAME Test1
     COMMAND ./run hello world
     CONFIGURATIONS cfg
@@ -195,3 +196,7 @@ add_test(NAME Test1
     CONFIGURATIONS cfg
     WORKING_DIRECTORY home
 )
+
+if(TRUE) # FOOBAR
+    user()
+endif()
