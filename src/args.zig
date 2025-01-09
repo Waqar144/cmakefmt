@@ -14,21 +14,25 @@ pub fn printHelp() !void {
         \\
         \\Options:
         \\ -i   Overwite the given file (inplace formatting)
+        \\ -h   Print this help text
         \\
     );
 }
 
 pub const Options = struct {
+    help: bool,
     inplace: bool,
     filename: []const u8,
 };
 
 pub fn parseArgs(args: *std.process.ArgIterator) Options {
-    var options: Options = .{ .inplace = false, .filename = "" };
+    var options: Options = .{ .help = false, .inplace = false, .filename = "" };
     _ = args.next(); // skip first arg
     while (args.next()) |arg| {
         if (std.mem.eql(u8, arg, "-i")) {
             options.inplace = true;
+        } else if (std.mem.eql(u8, arg, "-h")) {
+            options.help = true;
         } else {
             options.filename = arg;
         }

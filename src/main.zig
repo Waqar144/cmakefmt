@@ -14,6 +14,11 @@ pub fn main() !void {
     var argsIt = try std.process.argsWithAllocator(allocator);
     const options = args.parseArgs(&argsIt);
 
+    if (options.help) {
+        try args.printHelp();
+        return;
+    }
+
     if (options.inplace and options.filename.len == 0) {
         std.log.err("Please pass path to a cmake file", .{});
         try args.printHelp();
