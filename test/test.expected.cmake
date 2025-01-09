@@ -199,9 +199,12 @@ add_test(NAME Test1
 
 if(TRUE) # FOOBAR
     user()
-endif()
+endif() #[comment]
+
 if(TRUE)
     user(
         # comment
     )
 endif()
+#[comment]
+#[=comment]

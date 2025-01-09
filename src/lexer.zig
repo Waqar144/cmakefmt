@@ -85,15 +85,31 @@ fn readComment(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void
     // bracketed comment
     var j = i.*;
     if (j + 1 < source.len and source[j + 1] == '[') {
+        // assume this is a bracket_comment, push the '#'
         try tokens.append(Token{ .Comment = .{ .bracketed = true, .text = source[j .. j + 1] } });
-        j += 1;
-        try readBracketedArg(source, tokens, &j);
-        i.* = j;
-        return;
+        // check if this is really a bracket_comment
+        var k = j + 1;
+        var success: bool = true;
+        readBracketedArg(source, tokens, &k) catch |err| {
+            if (err == error.ParseError) {
+                success = false;
+            } else {
+                return err;
+            }
+        };
+
+        if (success) { // yes it is
+            i.* = k;
+            return;
+        } else {
+            // pop off the '#'
+            const commentHash = tokens.pop();
+            std.debug.assert(std.mem.eql(u8, commentHash.Comment.text, "#"));
+        }
     }
 
     // line comment
-    while (source[j] != '\n') : (j += 1) {}
+    while (j < source.len and source[j] != '\n') : (j += 1) {}
     try tokens.append(Token{ .Comment = .{ .bracketed = false, .text = source[i.*..j] } });
     i.* = j;
 }

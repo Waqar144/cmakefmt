@@ -256,3 +256,16 @@ test "comment after unquoted arg" {
     };
     try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
+
+test "not bracketed comment" {
+    const t = std.testing;
+    const source = "#[comment]\n#[=comment]";
+    var tokens = try lexer.lex(source, std.testing.allocator);
+    defer tokens.deinit();
+    const expectedTokens = [_]lexer.Token{
+        .{ .Comment = .{ .bracketed = false, .text = "#[comment]" } },
+        .{ .Newline = .{} },
+        .{ .Comment = .{ .bracketed = false, .text = "#[=comment]" } },
+    };
+    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+}

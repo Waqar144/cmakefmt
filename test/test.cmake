@@ -81,9 +81,12 @@ add_test(NAME Test1 COMMAND ./run hello world 1 CONFIGURATIONS cfg WORKING_DIREC
 
 if(TRUE) # FOOBAR
  user()
-endif()
+endif() #[comment]
+
 if(TRUE)
   user(
     # comment
     )
 endif()
+#[comment]
+#[=comment]
