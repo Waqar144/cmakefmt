@@ -68,5 +68,6 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_exe_unit_tests.step);
 
     const cmdd = b.addSystemCommand(&.{ "bash", "test.sh" });
+    cmdd.step.dependOn(b.getInstallStep());
     test_step.dependOn(&cmdd.step);
 }

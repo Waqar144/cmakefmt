@@ -243,7 +243,11 @@ fn handleCommand(cmd: lex.Command) void {
             .Comment => |c| {
                 handleComment(c);
             },
-            .Newline => |_| {
+            .Newline => |_| blk: {
+                // if there is only 1 newline and the next token is ')', then skip this newline
+                // and move the paren to prev
+                if (newlines == 0 and isNextTokenParenClose() and bracketDepth - 1 == 0)
+                    break :blk;
                 handleNewline();
                 newlines += 1;
                 numArgsInLine = countArgsInLine(currentTokenIndex.* + 1);
