@@ -61,3 +61,16 @@ C2 C3 C4
 find_package(PKG ${PKG_VERSION} REQUIRED COMPONENTS
 C1 C2 C3
 )
+add_custom_command(
+OUTPUT FOO
+# first line comment
+# second line comment
+some_other_output
+another_output
+COMMAND FOO
+# first line comment
+# second line comment
+some_arg_to_foo_command
+another_arg_to_foo_command
+COMMAND BAZ
+)

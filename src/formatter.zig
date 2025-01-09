@@ -300,7 +300,7 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, n
     while (k < gtokens.items.len) : (k += 1) {
         const arg = gtokens.items[k];
         switch (arg) {
-            .UnquotedArg, .QuotedArg, .BracketedArg => {
+            .UnquotedArg, .QuotedArg, .BracketedArg, .Comment => {
                 if (commandKeywords.contains(arg.text()))
                     break;
                 numArgsForMultiArg += 1;
@@ -337,7 +337,7 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, n
     while (processed < numArgsForMultiArg) : (j += 1) {
         const arg = gtokens.items[j];
         switch (arg) {
-            .UnquotedArg, .QuotedArg, .BracketedArg => {
+            .UnquotedArg, .QuotedArg, .BracketedArg, .Comment => {
                 const isLast = processed + 1 == numArgsForMultiArg;
                 write(arg.text());
 
