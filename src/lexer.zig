@@ -60,6 +60,18 @@ fn isEscapeSequence(source: []const u8, i: u32) bool {
     return false;
 }
 
+fn consumeWhitespace(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void {
+    var j = i.*;
+    while (j < source.len and std.ascii.isWhitespace(source[j])) {
+        if (source[j] == '\n') {
+            try readNewline(tokens, &j);
+        } else {
+            j += 1;
+        }
+    }
+    i.* = j;
+}
+
 fn readNewline(tokens: *std.ArrayList(Token), i: *u32) !void {
     try tokens.append(Token{ .Newline = .{} });
     i.* += 1;
@@ -203,16 +215,9 @@ fn readUnquotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !
 // separation          ::=  space | line_ending
 fn parseArgs(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void {
     var j = i.*;
-    while (j < source.len and std.ascii.isWhitespace(source[j])) {
-        if (source[j] == '\n') {
-            try readNewline(tokens, &j);
-            continue;
-        }
-        j += 1;
-    }
+    try consumeWhitespace(source, tokens, &j);
 
     var parenDepth: u32 = 0;
-
     // argument ::=  bracket_argument | quoted_argument | unquoted_argument
     while (j < source.len) {
         if (std.ascii.isWhitespace(source[j])) {
@@ -273,15 +278,7 @@ fn parseCommand(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !voi
     try tokens.*.append(Token{ .Cmd = .{ .text = source[i.*..j] } });
     i.* = j;
 
-    // skip whitespace
-    while (std.ascii.isWhitespace(source[j])) {
-        if (source[j] == '\n') {
-            try readNewline(tokens, &j);
-            continue;
-        }
-        j += 1;
-    }
-    i.* = j;
+    try consumeWhitespace(source, tokens, &j);
 
     if (source[j] != '(') {
         std.debug.print("Expected a '(' after command: {s}\n", .{tokens.*.getLast().Cmd.text});
