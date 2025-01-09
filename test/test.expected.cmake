@@ -200,3 +200,8 @@ add_test(NAME Test1
 if(TRUE) # FOOBAR
     user()
 endif()
+if(TRUE)
+    user(
+        # comment
+    )
+endif()

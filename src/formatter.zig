@@ -109,6 +109,7 @@ fn write(text: []const u8) void {
     _ = gOutBuffer.appendSlice(text) catch |err| {
         std.log.err("Error when writing {s}", .{@errorName(err)});
     };
+    if (std.mem.trim(u8, text, " ").len == 0) return;
     prevWasNewline = std.mem.endsWith(u8, text, "\n");
 }
 
