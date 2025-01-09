@@ -309,24 +309,15 @@ pub fn lex(source: []const u8, allocator: std.mem.Allocator) !std.ArrayList(Toke
     while (i < source.len) {
         if (isSpace(source[i])) {
             i += 1;
-            continue;
-        }
-        if (source[i] == '\n') {
+        } else if (source[i] == '\n') {
             try readNewline(&tokens, &i);
-            continue;
-        }
-
-        if (source[i] == '#') {
+        } else if (source[i] == '#') {
             try readComment(source, &tokens, &i);
-            continue;
-        }
-
-        if (std.ascii.isAlphabetic(source[i]) or source[i] == '_') {
+        } else if (std.ascii.isAlphabetic(source[i]) or source[i] == '_') {
             try parseCommand(source, &tokens, &i);
-            continue;
+        } else {
+            std.debug.panic("Unhandled char {c}\n", .{source[i]});
         }
-
-        i += 1;
     }
 
     // debug helper
