@@ -74,3 +74,5 @@ some_arg_to_foo_command
 another_arg_to_foo_command
 COMMAND BAZ
 )
+add_test(NAME Test1 COMMAND ./run hello world CONFIGURATIONS cfg WORKING_DIRECTORY home)
+add_test(NAME Test1 COMMAND ./run hello world 1 CONFIGURATIONS cfg WORKING_DIRECTORY home)

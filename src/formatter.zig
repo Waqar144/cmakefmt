@@ -83,6 +83,8 @@ const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_strin
         .multi = &.{ "TARGET", "OUTPUT", "COMMAND", "ARGS", "DEPENDS", "BYPRODUCTS", "IMPLICIT_DEPENDS", "OUTPUT", "MAIN_DEPENDENCY", "WORKING_DIRECTORY", "COMMENT", "DEPFILE", "JOB_POOL", "JOB_SERVER_AWARE" },
         .keywords = &.{ "VERBATIM", "APPEND", "USES_TERMINAL", "COMMAND_EXPAND_LISTS", "DEPENDS_EXPLICIT_ONLY", "CODEGEN", "PRE_BUILD", "PRE_LINK", "POST_BUILD" },
     } },
+    // add_test
+    .{ "add_test", .{ .multi = &.{ "NAME", "COMMAND", "CONFIGURATIONS", "WORKING_DIRECTORY" }, .keywords = &.{"COMMAND_EXPAND_LISTS"} } },
 
     // 3rdparty stuff
 
