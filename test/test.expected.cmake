@@ -147,3 +147,15 @@ ecm_generate_export_header(KF6TextEditor
     DEPRECATION_VERSIONS 6.9
     EXCLUDE_DEPRECATED_BEFORE_AND_AT ${EXCLUDE_DEPRECATED_BEFORE_AND_AT}
 )
+set_target_properties(target PROPERTIES
+    VERSION ${MY_VERSION}
+    SOVERSION ${MYAPP_SOVERSION}
+    EXPORT_NAME "SomeName"
+)
+set_tests_properties(KF6TextEditor
+    DIRECTORY "a/b/c"
+    PROPERTIES
+    VERSION ${asd}
+    SOVERSION ${asdf}
+    EXPORT_NAME "asdfg"
+)

@@ -43,10 +43,7 @@ const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_strin
     } },
 
     // build_command
-    .{ "build_command", .{
-        .multi = &.{ "CONFIGURATION", "PARALLEL_LEVEL", "TARGET", "PROJECT_NAME" },
-        .keywords = emptyArgs,
-    } },
+    .{ "build_command", .{ .multi = &.{ "CONFIGURATION", "PARALLEL_LEVEL", "TARGET", "PROJECT_NAME" }, .keywords = emptyArgs } },
 
     // find_program
     .{ "find_program", .{
@@ -55,34 +52,19 @@ const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_strin
     } },
 
     // target_link_libraries
-    .{ "target_link_libraries", .{
-        .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE", "LINK_PUBLIC", "LINK_PRIVATE", "LINK_INTERFACE_LIBRARIES" },
-        .keywords = emptyArgs,
-    } },
-
+    .{ "target_link_libraries", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE", "LINK_PUBLIC", "LINK_PRIVATE", "LINK_INTERFACE_LIBRARIES" }, .keywords = emptyArgs } },
     // target_compile_definitions
-    .{ "target_compile_definitions", .{
-        .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" },
-        .keywords = emptyArgs,
-    } },
-
+    .{ "target_compile_definitions", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .keywords = emptyArgs } },
     // target_precompile_headers
-    .{ "target_precompile_headers", .{
-        .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" },
-        .keywords = emptyArgs,
-    } },
-
+    .{ "target_precompile_headers", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .keywords = emptyArgs } },
     // target_include_directories
-    .{ "target_include_directories", .{
-        .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" },
-        .keywords = emptyArgs,
-    } },
-
+    .{ "target_include_directories", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .keywords = emptyArgs } },
     // target_include_options
-    .{ "target_include_options", .{
-        .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" },
-        .keywords = emptyArgs,
-    } },
+    .{ "target_include_options", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .keywords = emptyArgs } },
+    // set_target_properties
+    .{ "set_target_properties", .{ .multi = &.{"PROPERTIES"}, .keywords = emptyArgs } },
+    // set_tests_properties
+    .{ "set_tests_properties", .{ .multi = &.{ "PROPERTIES", "DIRECTORY" }, .keywords = emptyArgs } },
 
     // 3rdparty stuff
 
@@ -312,6 +294,7 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) bo
 
     var j = currentTokenIndex.*;
     write(gtokens.items[j].text());
+    const isPROPERTIES = strequal(gtokens.items[j].text(), "PROPERTIES");
     j += 1;
 
     // separate args with newline if there are more than 3 args
@@ -321,7 +304,8 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) bo
     if (seperateWithNewline) {
         newlinesInserted.* = true;
         write("\n");
-        writeIndent(indent + 1);
+        const inc: u32 = if (isPROPERTIES) 0 else 1;
+        writeIndent(indent + inc);
     } else {
         write(" ");
     }
@@ -331,13 +315,26 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) bo
         const arg = gtokens.items[j];
         switch (arg) {
             .UnquotedArg, .QuotedArg, .BracketedArg => {
-                write(arg.text());
                 const isLast = processed + 1 == numArgsForMultiArg;
-                if (!isLast and seperateWithNewline) {
-                    write("\n");
-                    writeIndent(indent + 1);
-                } else if (!isLast) {
-                    write(" ");
+                write(arg.text());
+
+                if (isPROPERTIES) {
+                    // key value\n
+                    if (!isLast) {
+                        if ((processed + 1) % 2 == 0) {
+                            write("\n");
+                            writeIndent(indent);
+                        } else {
+                            write(" ");
+                        }
+                    }
+                } else {
+                    if (!isLast and seperateWithNewline) {
+                        write("\n");
+                        writeIndent(indent + 1);
+                    } else if (!isLast) {
+                        write(" ");
+                    }
                 }
                 processed += 1;
             },
