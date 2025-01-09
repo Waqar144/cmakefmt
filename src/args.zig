@@ -4,12 +4,15 @@ pub fn printHelp() !void {
     _ = try std.io.getStdOut().writeAll(
         \\Usage:
         \\
+        \\ If no arguments are specified then input is taken from stdin
+        \\
         \\Overwrite the given file:
         \\    cmakefmt -i CMakeLists.txt
         \\
         \\Write to stdout:
         \\    cmakefmt CMakeLists.txt
         \\
+        \\Options:
         \\ -i   Overwite the given file (inplace formatting)
         \\
     );
