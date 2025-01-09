@@ -93,9 +93,7 @@ fn readComment(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void
     }
 
     // line comment
-    while (source[j] != '\n') {
-        j += 1;
-    }
+    while (source[j] != '\n') : (j += 1) {}
     try tokens.append(Token{ .Comment = .{ .bracketed = false, .text = source[i.*..j] } });
     i.* = j;
 }
@@ -226,7 +224,6 @@ fn parseArgs(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void {
                 continue;
             }
             j += 1;
-            continue;
         }
         // command end
         else if (source[j] == ')') {
@@ -252,7 +249,6 @@ fn parseArgs(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void {
         // a comment
         else if (source[j] == '#') {
             try readComment(source, tokens, &j);
-            continue;
         }
         // read unquoted arg
         else {
