@@ -219,7 +219,8 @@ fn handleCommand(cmd: lex.Command) void {
                 if (maybeCommandKeywords) |commandKeywords| {
                     if (commandKeywords.hasMultiArgKeyword(argText)) {
                         var newlinesInserted: bool = false;
-                        if (handleMultiArgs(commandKeywords, &newlinesInserted)) {
+                        const argOnSameLineAsCmd = newlines == 0;
+                        if (handleMultiArgs(commandKeywords, argOnSameLineAsCmd, &newlinesInserted)) {
                             newlines += if (newlinesInserted) 1 else 0;
                             break :blk;
                         }
@@ -270,7 +271,7 @@ fn handleCommand(cmd: lex.Command) void {
     }
 }
 
-fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) bool {
+fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, newlinesInserted: *bool) bool {
     // count multi args
     var k = currentTokenIndex.* + 1;
     var numArgsForMultiArg: u32 = 0;
@@ -304,7 +305,7 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) bo
     if (seperateWithNewline) {
         newlinesInserted.* = true;
         write("\n");
-        const inc: u32 = if (isPROPERTIES) 0 else 1;
+        const inc: u32 = if (isPROPERTIES) 0 else if (argOnSameLineAsCmd) 0 else 1;
         writeIndent(indent + inc);
     } else {
         write(" ");
@@ -331,7 +332,8 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, newlinesInserted: *bool) bo
                 } else {
                     if (!isLast and seperateWithNewline) {
                         write("\n");
-                        writeIndent(indent + 1);
+                        const inc: u32 = if (argOnSameLineAsCmd) 0 else 1;
+                        writeIndent(indent + inc);
                     } else if (!isLast) {
                         write(" ");
                     }

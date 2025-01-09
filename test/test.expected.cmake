@@ -159,3 +159,9 @@ set_tests_properties(KF6TextEditor
     SOVERSION ${asdf}
     EXPORT_NAME "asdfg"
 )
+find_package(PKG ${PKG_VERSION} REQUIRED COMPONENTS
+    C1
+    C2
+    C3
+    C4
+)
