@@ -38,11 +38,7 @@ pub const Token = union(enum) {
 };
 
 fn countEquals(source: []const u8, from: u32) u32 {
-    var j = from;
-    while (source[j] == '=') {
-        j += 1;
-    }
-    return j - from;
+    return @intCast((std.mem.indexOfNonePos(u8, source, from, "=") orelse from) - from);
 }
 
 fn isSpace(source: u8) bool {
