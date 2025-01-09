@@ -369,6 +369,7 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, n
     currentTokenIndex.* = j - 1;
 
     if (!isNextTokenNewline() and !isNextTokenParenClose()) {
+        newlinesInserted.* = true;
         write("\n");
         writeIndent(indent);
     }
