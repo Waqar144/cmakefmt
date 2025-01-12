@@ -86,6 +86,9 @@ const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_strin
     // add_test
     .{ "add_test", .{ .multi = &.{ "NAME", "COMMAND", "CONFIGURATIONS", "WORKING_DIRECTORY" }, .keywords = &.{"COMMAND_EXPAND_LISTS"} } },
 
+    // target_sources
+    .{ "target_sources", .{ .multi = &.{ "INTERFACE", "PUBLIC", "PRIVATE" }, .keywords = emptyArgs } },
+
     // 3rdparty stuff
 
     // ecm_generate_headers
