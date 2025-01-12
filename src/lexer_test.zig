@@ -269,3 +269,8 @@ test "not bracketed comment" {
     };
     try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
+
+test "bad bracketed comment" {
+    const source = "#[[comment]";
+    try std.testing.expectError(error.UnmatchedBrackets, lexer.lex(source, std.testing.allocator));
+}

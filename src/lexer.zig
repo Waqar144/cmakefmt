@@ -136,11 +136,13 @@ fn readBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) 
             if (equalsCount == numEquals and a < source.len and source[a] == ']') {
                 j = a + 1;
                 try tokens.append(Token{ .BracketedArg = .{ .text = source[i.*..j] } });
-                break;
+                i.* = j;
+                return;
             }
         }
     }
-    i.* = j;
+    std.debug.print("Unmatched brackets [[ ]]\n", .{});
+    return error.UnmatchedBrackets;
 }
 
 // quoted_argument     ::=  '"' quoted_element* '"'
@@ -315,6 +317,8 @@ fn parseCommand(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !voi
 pub fn lex(source: []const u8, allocator: std.mem.Allocator) !std.ArrayList(Token) {
     var i: u32 = 0;
     var tokens = std.ArrayList(Token).init(allocator);
+    errdefer tokens.deinit();
+
     while (i < source.len) {
         if (isSpace(source[i])) {
             i += 1;
