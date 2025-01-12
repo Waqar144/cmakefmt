@@ -410,6 +410,11 @@ fn handleComment(a: lex.Comment) void {
         write(" ");
     }
     write(std.mem.trimLeft(u8, a.text, " "));
+
+    if (a.bracketed) {
+        currentTokenIndex.* += 1;
+        write(gtokens.items[currentTokenIndex.*].text());
+    }
 }
 
 fn handleNewline() void {

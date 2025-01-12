@@ -90,3 +90,14 @@ if(TRUE)
 endif()
 #[comment]
 #[=comment]
+
+#[[ Bracketed Comment     0   ]]
+#[=[ Bracketed Comment       1   ]=]
+#[==[ Bracketed Comment       2   ]==]
+#[===[ Bracketed Comment     3   ]===]
+#[[
+Bracketed Multi
+
+
+line
+]]
