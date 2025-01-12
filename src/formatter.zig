@@ -215,8 +215,8 @@ fn handleCommand(cmd: lex.Command) void {
 
     while (currentTokenIndex.* < gtokens.items.len) {
         switch (gtokens.items[currentTokenIndex.*]) {
-            .Cmd => |_| {
-                std.log.err("command in unexpected place, probably a bug: {s}\n", .{cmd.text});
+            .Cmd => |c| {
+                std.log.err("command in unexpected place, probably a bug: {s} {s}\n", .{ cmd.text, c.text });
                 std.process.exit(1);
             },
             .Paren => |p| {
@@ -241,7 +241,7 @@ fn handleCommand(cmd: lex.Command) void {
                     if (commandKeywords.hasMultiArgKeyword(argText)) {
                         var newlinesInserted: bool = false;
                         const argOnSameLineAsCmd = newlines == 0;
-                        if (handleMultiArgs(commandKeywords, argOnSameLineAsCmd, &newlinesInserted)) {
+                        if (handleMultiArgs(commandKeywords, argOnSameLineAsCmd, &newlinesInserted, bracketDepth)) {
                             newlines += if (newlinesInserted) 1 else 0;
                             break :blk;
                         }
@@ -296,9 +296,10 @@ fn handleCommand(cmd: lex.Command) void {
     }
 }
 
-fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, newlinesInserted: *bool) bool {
+fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, newlinesInserted: *bool, currentBracketDepth: i32) bool {
     // count multi args
     var k = currentTokenIndex.* + 1;
+    var bracketDepth = currentBracketDepth;
     var numArgsForMultiArg: u32 = 0;
     while (k < gtokens.items.len) : (k += 1) {
         const arg = gtokens.items[k];
@@ -308,7 +309,15 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, n
                     break;
                 numArgsForMultiArg += 1;
             },
-            .Cmd => break,
+            .Paren => |p| {
+                bracketDepth += if (p.opener) 1 else -1;
+                if (bracketDepth == 0)
+                    break;
+            },
+            .Cmd => {
+                std.log.err("Command in unexpected place, this is a bug", .{});
+                std.process.exit(1);
+            },
             else => continue,
         }
     }
