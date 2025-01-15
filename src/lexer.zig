@@ -77,6 +77,17 @@ fn readNewline(tokens: *std.ArrayList(Token), i: *u32) !void {
     i.* += 1;
 }
 
+fn tryReadBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !bool {
+    readBracketedArg(source, tokens, i) catch |err| {
+        if (err == error.ExpectedAnotherBracket) {
+            return false;
+        } else {
+            return err;
+        }
+    };
+    return true;
+}
+
 // comment ::= bracket_comment | line_comment
 // bracket_comment ::=  '#' bracket_argument
 // line_comment ::=  '#' <any text not starting in a bracket_open
@@ -89,16 +100,7 @@ fn readComment(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void
         try tokens.append(Token{ .Comment = .{ .bracketed = true, .text = source[j .. j + 1] } });
         // check if this is really a bracket_comment
         var k = j + 1;
-        var success: bool = true;
-        readBracketedArg(source, tokens, &k) catch |err| {
-            if (err == error.ParseError) {
-                success = false;
-            } else {
-                return err;
-            }
-        };
-
-        if (success) { // yes it is
+        if (try tryReadBracketedArg(source, tokens, &k)) {
             i.* = k;
             return;
         } else {
@@ -127,7 +129,7 @@ fn readBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) 
     j += numEquals;
 
     // expect another [
-    if (source[j] != '[') return error.ParseError;
+    if (source[j] != '[') return error.ExpectedAnotherBracket;
 
     while (j < source.len) : (j += 1) {
         if (source[j] == ']') {
@@ -261,8 +263,8 @@ fn parseArgs(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void {
             try readQuotedArg(source, tokens, &j);
         }
         // read bracketed arg
-        else if (source[j] == '[') {
-            try readBracketedArg(source, tokens, &j);
+        else if (source[j] == '[' and try tryReadBracketedArg(source, tokens, &j)) {
+            //
         }
         // a comment
         else if (source[j] == '#') {
