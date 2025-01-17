@@ -174,26 +174,37 @@ add_custom_command(
         some_other_output
         another_output
     COMMAND
-        FOO
-        # first line comment
+        FOO # first line comment
         # second line comment
-        some_arg_to_foo_command
-        another_arg_to_foo_command
+        some_arg_to_foo_command another_arg_to_foo_command
     COMMAND BAZ
 )
 
 add_test(NAME Test1
-    COMMAND ./run hello world
+    COMMAND
+        ./run hello world #com
+        123 #helo
+        blah #helo
     CONFIGURATIONS cfg
     WORKING_DIRECTORY home
 )
+
+add_test(NAME Test1
+    COMMAND ./run world #world
+    CONFIGURATIONS cfg
+    WORKING_DIRECTORY home
+)
+
+add_test(NAME Test1
+    COMMAND ./run #world
+        world
+    CONFIGURATIONS cfg
+    WORKING_DIRECTORY home
+)
+
 add_test(NAME Test1
     COMMAND
-        ./run
-        hello
-        world
-        1
-    CONFIGURATIONS cfg
+        ./run #[[com]] hello #[[com]] world CONFIGURATIONS cfg
     WORKING_DIRECTORY home
 )
 

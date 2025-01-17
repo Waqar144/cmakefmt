@@ -76,8 +76,21 @@ COMMAND BAZ
 )
 
 
-add_test(NAME Test1 COMMAND ./run hello world CONFIGURATIONS cfg WORKING_DIRECTORY home)
-add_test(NAME Test1 COMMAND ./run hello world 1 CONFIGURATIONS cfg WORKING_DIRECTORY home)
+add_test(NAME Test1 COMMAND ./run hello
+world #com
+123 #helo
+blah #helo
+CONFIGURATIONS cfg WORKING_DIRECTORY home)
+
+add_test(NAME Test1 COMMAND ./run
+world #world
+CONFIGURATIONS cfg WORKING_DIRECTORY home)
+
+add_test(NAME Test1 COMMAND ./run #world
+world
+CONFIGURATIONS cfg WORKING_DIRECTORY home)
+
+add_test(NAME Test1 COMMAND ./run #[[com]] hello #[[com]] world CONFIGURATIONS cfg WORKING_DIRECTORY home)
 
 if(TRUE) # FOOBAR
  user()

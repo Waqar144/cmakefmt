@@ -333,11 +333,12 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, n
     var j = currentTokenIndex.*;
     write(gtokens.items[j].text());
     const isPROPERTIES = strequal(gtokens.items[j].text(), "PROPERTIES");
+    const isCOMMAND = strequal(gtokens.items[j].text(), "COMMAND");
     j += 1;
 
     // separate args with newline if there are more than 3 args
     // TODO: probably account for text length here along with num args
-    const seperateWithNewline = (numArgsForMultiArg > 3);
+    var seperateWithNewline = (numArgsForMultiArg > 3);
 
     if (seperateWithNewline) {
         newlinesInserted.* = true;
@@ -348,11 +349,16 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, n
         write(" ");
     }
 
+    // we try to put the command on the next line, not separate all the args on one line each
+    if (isCOMMAND) {
+        seperateWithNewline = false;
+    }
+
     var processed: u32 = 0;
     while (processed < numArgsForMultiArg) : (j += 1) {
         const arg = gtokens.items[j];
         switch (arg) {
-            .UnquotedArg, .QuotedArg, .BracketedArg, .Comment => {
+            .UnquotedArg, .QuotedArg, .BracketedArg => {
                 const isLast = processed + 1 == numArgsForMultiArg;
                 write(arg.text());
 
@@ -376,6 +382,28 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, n
                     }
                 }
                 processed += 1;
+            },
+            .Comment => |c| {
+                processed += 1;
+                const isLast = processed == numArgsForMultiArg;
+                if (c.bracketed) {
+                    write(c.text);
+                    j += 1;
+                    write(gtokens.items[j].text());
+                    if (!isLast and seperateWithNewline) {
+                        write("\n");
+                        const inc: u32 = if (argOnSameLineAsCmd) 0 else 1;
+                        writeIndent(indent + inc);
+                    } else if (!isLast) {
+                        write(" ");
+                    }
+                } else {
+                    write(c.text);
+                    if (!isLast) {
+                        write("\n");
+                        writeIndent(indent + 1);
+                    }
+                }
             },
             else => continue,
         }
