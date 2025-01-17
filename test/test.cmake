@@ -120,3 +120,5 @@ Bracketed Multi
 
 line
 ]]
+
+Python_add_library(lak MODULE USE_SABI 3.123 #[[comment]] file1 file2 file3)

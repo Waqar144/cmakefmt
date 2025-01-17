@@ -219,8 +219,16 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
                 if (commandKeywords.contains(arg.text()))
                     break;
                 numArgsForMultiArg += 1;
-                if (isOneValueArg)
+                if (isOneValueArg) {
+                    if (k + 1 < gtokens.items.len) {
+                        const next = gtokens.items[k + 1];
+                        if (std.meta.activeTag(next) == .Comment) {
+                            numArgsForMultiArg += 1;
+                            if (next.Comment.bracketed) numArgsForMultiArg += 1;
+                        }
+                    }
                     break;
+                }
             },
             .Paren => |p| {
                 bracketDepth += if (p.opener) 1 else -1;
@@ -255,7 +263,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
 
     // separate args with newline if there are more than 3 args
     // TODO: probably account for text length here along with num args
-    var seperateWithNewline = (numArgsForMultiArg > 3);
+    var seperateWithNewline = (numArgsForMultiArg > 3) and !isOneValueArg;
 
     if (seperateWithNewline) {
         newlinesInserted.* = true;
