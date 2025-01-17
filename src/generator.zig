@@ -89,7 +89,7 @@ fn generate(allocator: std.mem.Allocator, dirPath: []const u8, skipPrivateFns: b
                         }
 
                         // if it starts with _ we assume its private
-                        if (skipPrivateFns and std.mem.startsWith(u8, functionName, "_")) {
+                        if (skipPrivateFns and (std.mem.startsWith(u8, functionName, "_") or std.mem.startsWith(u8, functionName, "qt_internal"))) {
                             continue;
                         }
 
@@ -268,7 +268,11 @@ pub fn dump(allocator: std.mem.Allocator, functionArgData: std.StringHashMap(Key
         const dumpArray = struct {
             fn dumpArrayFn(comptime name: []const u8, values: std.ArrayList([]const u8), appendComma: bool) void {
                 if (values.items.len == 0) {
-                    std.debug.print(".{s} = emptyArgs,\n    ", .{name});
+                    if (appendComma) {
+                        std.debug.print(".{s} = emptyArgs,\n    ", .{name});
+                    } else {
+                        std.debug.print(".{s} = emptyArgs\n    ", .{name});
+                    }
                     return;
                 }
                 std.debug.print(".{s} = &.{{", .{name});
