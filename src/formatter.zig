@@ -147,7 +147,7 @@ fn handleCommand(cmd: lex.Command) void {
             .UnquotedArg, .QuotedArg, .BracketedArg => blk: {
                 const argText = gtokens.items[currentTokenIndex.*].text();
                 if (maybeCommandKeywords) |commandKeywords| {
-                    if (commandKeywords.hasMultiArgKeyword(argText)) {
+                    if (commandKeywords.hasArgWithValueKeyword(argText)) {
                         var newlinesInserted: bool = false;
                         const argOnSameLineAsCmd = newlines == 0;
                         if (handleMultiArgs(commandKeywords, argOnSameLineAsCmd, &newlinesInserted, bracketDepth)) {
@@ -207,21 +207,32 @@ fn handleCommand(cmd: lex.Command) void {
 
 fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameLineAsCmd: bool, newlinesInserted: *bool, currentBracketDepth: i32) bool {
     // count multi args
+    const isOneValueArg = commandKeywords.isOneValueArg(gtokens.items[currentTokenIndex.*].text());
+
     var k = currentTokenIndex.* + 1;
     var bracketDepth = currentBracketDepth;
     var numArgsForMultiArg: u32 = 0;
     while (k < gtokens.items.len) : (k += 1) {
         const arg = gtokens.items[k];
         switch (arg) {
-            .UnquotedArg, .QuotedArg, .BracketedArg, .Comment => {
+            .UnquotedArg, .QuotedArg, .BracketedArg => {
                 if (commandKeywords.contains(arg.text()))
                     break;
                 numArgsForMultiArg += 1;
+                if (isOneValueArg)
+                    break;
             },
             .Paren => |p| {
                 bracketDepth += if (p.opener) 1 else -1;
                 if (bracketDepth == 0)
                     break;
+            },
+            .Comment => |c| {
+                numArgsForMultiArg += 1;
+                if (c.bracketed) {
+                    k += 1;
+                    numArgsForMultiArg += 1;
+                }
             },
             .Cmd => {
                 std.log.err("Command in unexpected place, this is a bug", .{});

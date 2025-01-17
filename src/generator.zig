@@ -31,10 +31,10 @@ pub fn main() !void {
         std.process.exit(1);
     }
 
-    try generate(allocator, args[1]);
+    try generate(allocator, args[1], true);
 }
 
-fn generate(allocator: std.mem.Allocator, dirPath: []const u8) !void {
+fn generate(allocator: std.mem.Allocator, dirPath: []const u8, skipPrivateFns: bool) !void {
     const dir = std.fs.cwd().openDir(dirPath, .{ .iterate = true }) catch |err| {
         std.log.err("Failed to open dir: {s}\n", .{@errorName(err)});
         std.process.exit(1);
@@ -86,6 +86,11 @@ fn generate(allocator: std.mem.Allocator, dirPath: []const u8) !void {
                                 => continue,
                                 else => break,
                             }
+                        }
+
+                        // if it starts with _ we assume its private
+                        if (skipPrivateFns and std.mem.startsWith(u8, functionName, "_")) {
+                            continue;
                         }
 
                         i = j;
@@ -291,10 +296,9 @@ pub fn dump(allocator: std.mem.Allocator, functionArgData: std.StringHashMap(Key
             }
         }.dumpArrayFn;
 
-        dumpArray("keywords", value.options, true);
-        var combined = value.one;
-        try combined.appendSlice(value.multi.items);
-        dumpArray("multi", combined, false);
+        dumpArray("options", value.options, true);
+        dumpArray("one", value.one, true);
+        dumpArray("multi", value.multi, false);
 
         std.debug.print("}} }},\n", .{});
     }
