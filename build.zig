@@ -70,4 +70,19 @@ pub fn build(b: *std.Build) void {
     const cmdd = b.addSystemCommand(&.{ "bash", "test.sh" });
     cmdd.step.dependOn(b.getInstallStep());
     test_step.dependOn(&cmdd.step);
+
+    // BEGIN generator
+    const gen = b.addExecutable(.{
+        .name = "generator",
+        .root_source_file = b.path("src/generator.zig"),
+        .target = target,
+        .optimize = optimize,
+        .single_threaded = true,
+    });
+    const gen_cmd = b.addRunArtifact(gen);
+    if (b.args) |args| {
+        gen_cmd.addArgs(args);
+    }
+    b.step("gen", "Run the generator").dependOn(&gen_cmd.step);
+    // END generator
 }
