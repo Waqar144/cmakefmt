@@ -20,7 +20,7 @@ add_executable(hello
     hello5.c
 )
 add_executable(abc
-    abc.1 abc.2
+    abc.1 #[[com]]abc.2
     abc.3 abc.4
 )
 find_package(PKG

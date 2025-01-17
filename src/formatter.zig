@@ -441,9 +441,9 @@ fn handleParen(a: lex.Paren) void {
 }
 
 fn handleComment(a: lex.Comment) void {
-    const atStartOfLine = currentTokenIndex.* == 0 or currentTokenIndex.* > 0 and gtokens.items[currentTokenIndex.* - 1].isNewLine();
+    //     const atStartOfLine = currentTokenIndex.* == 0 or currentTokenIndex.* > 0 and gtokens.items[currentTokenIndex.* - 1].isNewLine();
     // add a space between prev element and comment if we are not at the start of line
-    if (!atStartOfLine) {
+    if (!prevWasNewline and (gOutBuffer.items.len > 0 and gOutBuffer.getLast() != ' ')) {
         write(" ");
     }
     write(std.mem.trimLeft(u8, a.text, " "));
