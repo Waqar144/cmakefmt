@@ -17,6 +17,12 @@ const KeywordData = struct {
     options: std.ArrayList([]const u8),
 };
 
+fn contains(arr: []const []const u8, needle: []const u8) bool {
+    for (arr) |item|
+        if (std.mem.eql(u8, item, needle)) return true;
+    return false;
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{ .thread_safe = false }){};
     defer _ = gpa.deinit();
@@ -259,9 +265,43 @@ pub fn resolveArgument(
 pub fn dump(allocator: std.mem.Allocator, functionArgData: std.StringHashMap(KeywordData)) !void {
     var it = functionArgData.iterator();
     while (it.next()) |kv| {
-        const value = kv.value_ptr.*;
+        var value = kv.value_ptr.*;
         if (value.options.items.len == 0 and value.multi.items.len == 0 and value.one.items.len == 0)
             continue;
+
+        // merge options from qt5 / qt6
+        if (std.mem.startsWith(u8, kv.key_ptr.*, "qt_")) {
+            // find qt6/qt5 counterparts
+            const key = kv.key_ptr.*;
+            const qt5 = try std.fmt.allocPrint(allocator, "qt5_{s}", .{key[3..]});
+            const qt6 = try std.fmt.allocPrint(allocator, "qt6_{s}", .{key[3..]});
+
+            const v5 = functionArgData.get(qt5);
+            const v6 = functionArgData.get(qt6);
+            var vv = kv.value_ptr.*;
+            const merge = struct {
+                fn mergeFn(arr: *std.ArrayList([]const u8), source: std.ArrayList([]const u8)) !void {
+                    for (source.items) |m| {
+                        if (!contains(arr.*.items, m)) {
+                            try arr.*.append(m);
+                        }
+                    }
+                }
+            }.mergeFn;
+
+            if (v5 != null) {
+                try merge(&vv.multi, v5.?.multi);
+                try merge(&vv.one, v5.?.one);
+                try merge(&vv.options, v5.?.options);
+            }
+            if (v6 != null) {
+                try merge(&vv.multi, v6.?.multi);
+                try merge(&vv.one, v6.?.one);
+                try merge(&vv.options, v6.?.options);
+            }
+
+            value = vv;
+        }
 
         std.debug.print(".{{ \"{s}\", .{{\n    ", .{try std.ascii.allocLowerString(allocator, kv.key_ptr.*)});
 
