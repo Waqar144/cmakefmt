@@ -354,6 +354,7 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, n
         seperateWithNewline = false;
     }
 
+    var isKey = true;
     var processed: u32 = 0;
     while (processed < numArgsForMultiArg) : (j += 1) {
         const arg = gtokens.items[j];
@@ -365,12 +366,13 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, n
                 if (isPROPERTIES) {
                     // key value\n
                     if (!isLast) {
-                        if ((processed + 1) % 2 == 0) {
+                        if (!isKey) {
                             write("\n");
                             writeIndent(indent);
                         } else {
                             write(" ");
                         }
+                        isKey = !isKey;
                     }
                 } else {
                     if (!isLast and seperateWithNewline) {
@@ -385,10 +387,12 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, n
             },
             .Comment => |c| {
                 processed += 1;
-                const isLast = processed == numArgsForMultiArg;
                 if (c.bracketed) {
                     write(c.text);
                     j += 1;
+                    processed += 1;
+                    const isLast = processed == numArgsForMultiArg;
+                    std.debug.assert(std.meta.activeTag(gtokens.items[j]) == .BracketedArg);
                     write(gtokens.items[j].text());
                     if (!isLast and seperateWithNewline) {
                         write("\n");
@@ -398,10 +402,12 @@ fn handleMultiArgs(commandKeywords: CommandKeywords, argOnSameLineAsCmd: bool, n
                         write(" ");
                     }
                 } else {
+                    const isLast = processed == numArgsForMultiArg;
                     write(c.text);
                     if (!isLast) {
                         write("\n");
-                        writeIndent(indent + 1);
+                        const inc: u32 = if (isPROPERTIES) 0 else 1;
+                        writeIndent(indent + inc);
                     }
                 }
             },

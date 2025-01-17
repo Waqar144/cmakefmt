@@ -159,6 +159,20 @@ set_tests_properties(KF6TextEditor
     SOVERSION ${asdf}
     EXPORT_NAME "asdfg"
 )
+set_target_properties(target PROPERTIES
+    VERSION ${MY_VERSION}
+    SOVERSION ${MYAPP_SOVERSION}
+    #[[comment]]
+    EXPORT_NAME "SomeName"
+)
+set_target_properties(target PROPERTIES
+    VERSION ${MY_VERSION}
+    #comment
+    SOVERSION ${MYAPP_SOVERSION}
+    #[[comment]]
+    EXPORT_NAME "SomeName"
+)
+
 find_package(PKG ${PKG_VERSION} REQUIRED COMPONENTS
     C1
     C2
@@ -204,7 +218,8 @@ add_test(NAME Test1
 
 add_test(NAME Test1
     COMMAND
-        ./run #[[com]] hello #[[com]] world CONFIGURATIONS cfg
+        ./run #[[com]] hello #[[com]] world
+    CONFIGURATIONS cfg
     WORKING_DIRECTORY home
 )
 
