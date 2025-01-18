@@ -70,6 +70,23 @@ pub const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_s
     } },
     .{ "add_test", .{ .multi = &.{ "COMMAND", "CONFIGURATIONS" }, .options = &.{"COMMAND_EXPAND_LISTS"}, .one = &.{ "NAME", "WORKING_DIRECTORY" } } },
     .{ "target_sources", .{ .multi = &.{ "INTERFACE", "PUBLIC", "PRIVATE" }, .options = emptyArgs, .one = emptyArgs } },
+    .{ "cmake_pkg_config", .{
+        .multi = &.{ "EXTRACT", "PC_LIBDIR", "PC_PATH", "SYSTEM_INCLUDE_DIRS", "SYSTEM_LIBRARY_DIRS" },
+        .one = &.{ "STRICTNESS", "ENV_MODE", "DISABLE_UNINSTALLED", "PC_SYSROOT_DIR", "TOP_BUILD_DIR", "ALLOW_SYSTEM_INCLUDES", "ALLOW_SYSTEM_LIBS" },
+        .options = &.{ "REQUIRED", "EXACT", "QUIET" },
+    } },
+    .{ "create_test_sourcelist", .{ .one = &.{ "EXTRA_INCLUDE", "FUNCTION" }, .options = emptyArgs, .multi = emptyArgs } },
+    .{ "define_property", .{ .one = &.{ "PROPERTY", "INITIALIZE_FROM_VARIABLE" }, .options = &.{ "GLOBAL", "DIRECTORY", "TARGET", "SOURCE", "TEST", "VARIABLE", "CACHED_VARIABLE", "INHERITED" }, .multi = &.{ "BRIEF_DOCS", "FULL_DOCS" } } },
+    .{ "ctest_build", .{ .one = &.{ "BUILD", "CONFIGURATION", "FLAGS", "PROJECT_NAME", "TARGET", "NUMBER_ERRORS", "NUMBER_WARNINGS", "RETURN_VALUE", "CAPTURE_CMAKE_ERROR", "PARALLEL_LEVEL" }, .options = &.{ "APPEND", "QUIET" }, .multi = emptyArgs } },
+    .{ "ctest_build", .{ .one = &.{ "BUILD", "SOURCE", "OPTIONS", "RETURN_VALUE", "CAPTURE_CMAKE_ERROR" }, .options = &.{ "APPEND", "QUIET" }, .multi = emptyArgs } },
+    .{ "export", .{
+        .one = &.{ "EXPORT", "NAMESPACE", "FILE", "NAMESPACE", "FILE", "ANDROID_MK", "PACKAGE", "SETUP" },
+        .options = &.{ "EXPORT_PACKAGE_DEPENDENCIES", "APPEND", "EXPORT_LINK_INTERFACE_LIBRARIES" },
+        .multi = &.{ "TARGETS", "PACKAGE_DEPENDENCY", "TARGET", "EXTRA_ARGS" },
+    } },
+    .{ "get_filename_component", .{ .one = &.{ "BASE_DIR", "PROGRAM_ARGS" }, .options = emptyArgs, .multi = emptyArgs } },
+    .{ "include", .{ .one = &.{"RESULT_VARIABLE"}, .options = emptyArgs, .multi = emptyArgs } },
+    .{ "project", .{ .one = &.{ "VERSION", "DESCRIPTION", "HOMEPAGE_URL" }, .options = emptyArgs, .multi = &.{"LANGUAGES"} } },
 
     // BEGIN builtin Modules
     .{ "find_package_check_version", .{ .options = &.{ "HANDLE_VERSION_RANGE", "NO_AUTHOR_WARNING_VERSION_RANGE" }, .one = &.{"RESULT_MESSAGE_VARIABLE"}, .multi = emptyArgs } },
