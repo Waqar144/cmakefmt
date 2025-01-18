@@ -29,67 +29,46 @@ pub const CommandKeywords = struct {
 };
 
 pub const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_string_map.eqlAsciiIgnoreCase).initComptime(.{
-    // find_package
+    // Builtin commands
     .{ "find_package", .{
         .multi = &.{ "COMPONENTS", "OPTIONAL_COMPONENTS", "NAMES", "CONFIGS", "HINTS", "PATHS", "PATH_SUFFIXES", "REQUIRED" },
         .options = &.{ "EXACT", "QUIET", "MODULE", "CONFIG", "NO_MODULE", "NO_POLICY_SCOPE", "NO_DEFAULT_PATH", "NO_PACKAGE_ROOT_PATH", "NO_CMAKE_PATH", "NO_CMAKE_ENVIRONMENT_PATH", "NO_SYSTEM_ENVIRONMENT_PATH", "NO_CMAKE_PACKAGE_REGISTRY", "NO_CMAKE_BUILDS_PATH", "NO_CMAKE_SYSTEM_PATH", "NO_CMAKE_SYSTEM_PACKAGE_REGISTRY", "CMAKE_FIND_ROOT_PATH_BOTH", "ONLY_CMAKE_FIND_ROOT_PATH", "NO_CMAKE_FIND_ROOT_PATH", "NO_CMAKE_INSTALL_PREFIX", "GLOBAL" },
         .one = emptyArgs,
     } },
-
-    // find_library
     .{ "find_library", .{
         .one = &.{ "DOC", "ENV", "VALIDATOR" },
         .multi = &.{ "NAMES", "HINTS", "PATHS", "PATH_SUFFIXES" },
         .options = &.{ "NAMES_PER_DIR", "NO_DEFAULT_PATH", "NO_PACKAGE_ROOT_PATH", "NO_CMAKE_PATH", "NO_CMAKE_ENVIRONMENT_PATH", "NO_SYSTEM_ENVIRONMENT_PATH", "NO_CMAKE_SYSTEM_PATH", "CMAKE_FIND_ROOT_PATH_BOTH", "ONLY_CMAKE_FIND_ROOT_PATH", "NO_CMAKE_FIND_ROOT_PATH", "REQUIRED", "NO_CMAKE_INSTALL_PREFIX" },
     } },
-
-    // build_command
     .{ "build_command", .{ .one = &.{ "CONFIGURATION", "PARALLEL_LEVEL", "TARGET", "PROJECT_NAME" }, .multi = emptyArgs, .options = emptyArgs } },
-
-    // find_program
     .{ "find_program", .{
         .one = &.{ "DOC", "ENV", "VALIDATOR" },
         .multi = &.{ "NAMES", "NAMES_PER_DIR", "HINTS", "PATHS", "PATH_SUFFIXES", "REGISTRY_VIEW" },
         .options = &.{ "NO_CACHE", "REQUIRED", "NO_DEFAULT_PATH", "NO_PACKAGE_ROOT_PATH", "NO_CMAKE_PATH", "NO_CMAKE_ENVIRONMENT_PATH", "NO_SYSTEM_ENVIRONMENT_PATH", "NO_CMAKE_SYSTEM_PATH", "NO_CMAKE_INSTALL_PREFIX", "CMAKE_FIND_ROOT_PATH_BOTH", "ONLY_CMAKE_FIND_ROOT_PATH", "NO_CMAKE_FIND_ROOT_PATH" },
     } },
 
-    // target_link_libraries
     .{ "target_link_libraries", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE", "LINK_PUBLIC", "LINK_PRIVATE", "LINK_INTERFACE_LIBRARIES" }, .options = emptyArgs, .one = emptyArgs } },
-    // target_compile_definitions
     .{ "target_compile_definitions", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .options = emptyArgs, .one = emptyArgs } },
-    // target_precompile_headers
     .{ "target_precompile_headers", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .options = emptyArgs, .one = &.{"REUSE_FROM"} } },
-    // target_include_directories
     .{ "target_include_directories", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .options = &.{ "BEFORE", "SYSTEM", "AFTER" }, .one = emptyArgs } },
-    // target_include_options
     .{ "target_include_options", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .options = emptyArgs, .one = emptyArgs } },
-    // target_compile_features
     .{ "target_compile_features", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .options = emptyArgs, .one = emptyArgs } },
-    // target_compile_options
     .{ "target_compile_options", .{ .multi = &.{ "PRIVATE", "PUBLIC", "INTERFACE" }, .options = &.{"BEFORE"}, .one = emptyArgs } },
-    // set_target_properties
     .{ "set_target_properties", .{ .multi = &.{"PROPERTIES"}, .options = emptyArgs, .one = emptyArgs } },
-    // set_directory_properties
     .{ "set_directory_properties", .{ .multi = &.{"PROPERTIES"}, .options = emptyArgs, .one = emptyArgs } },
-    // set_tests_properties
     .{ "set_tests_properties", .{ .multi = &.{"PROPERTIES"}, .one = &.{"DIRECTORY"}, .options = emptyArgs } },
-    // set_source_files_properties
     .{ "set_source_files_properties", .{ .multi = &.{ "PROPERTIES", "DIRECTORY", "TARGET_DIRECTORY" }, .options = emptyArgs, .one = emptyArgs } },
-    // add_custom_target
     .{ "add_custom_target", .{
         .multi = &.{ "COMMAND", "DEPENDS", "BYPRODUCTS", "SOURCES" },
         .options = &.{ "ALL", "COMMAND_EXPAND_LISTS", "VERBATIM", "USES_TERMINAL" },
         .one = &.{ "WORKING_DIRECTORY", "COMMENT", "JOB_POOL", "JOB_SERVER_AWARE" },
     } },
-    // add_custom_command
     .{ "add_custom_command", .{
         .multi = &.{ "TARGET", "OUTPUT", "COMMAND", "ARGS", "DEPENDS", "BYPRODUCTS", "IMPLICIT_DEPENDS" },
         .options = &.{ "VERBATIM", "APPEND", "USES_TERMINAL", "COMMAND_EXPAND_LISTS", "DEPENDS_EXPLICIT_ONLY", "CODEGEN", "PRE_BUILD", "PRE_LINK", "POST_BUILD" },
         .one = &.{ "MAIN_DEPENDENCY", "WORKING_DIRECTORY", "COMMENT", "DEPFILE", "JOB_POOL", "JOB_SERVER_AWARE" },
     } },
-    // add_test
     .{ "add_test", .{ .multi = &.{ "COMMAND", "CONFIGURATIONS" }, .options = &.{"COMMAND_EXPAND_LISTS"}, .one = &.{ "NAME", "WORKING_DIRECTORY" } } },
-    // target_sources
     .{ "target_sources", .{ .multi = &.{ "INTERFACE", "PUBLIC", "PRIVATE" }, .options = emptyArgs, .one = emptyArgs } },
 
     // BEGIN builtin Modules
