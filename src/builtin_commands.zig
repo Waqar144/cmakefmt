@@ -28,7 +28,8 @@ pub const CommandKeywords = struct {
     }
 };
 
-pub const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_string_map.eqlAsciiIgnoreCase).initComptime(.{
+const KeyValueType = struct { []const u8, CommandKeywords };
+pub const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_string_map.eqlAsciiIgnoreCase).initComptime([_]KeyValueType{
     // Builtin commands
     .{ "find_package", .{
         .multi = &.{ "COMPONENTS", "OPTIONAL_COMPONENTS", "NAMES", "CONFIGS", "HINTS", "PATHS", "PATH_SUFFIXES", "REQUIRED" },
