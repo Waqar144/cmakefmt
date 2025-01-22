@@ -267,7 +267,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
 
     if (seperateWithNewline) {
         newlinesInserted.* = true;
-        write("\n");
+        writeln();
         const inc: u32 = if (isPROPERTIES) 0 else if (argOnSameLineAsCmd) 0 else 1;
         writeIndent(indent + inc);
     } else {
@@ -292,7 +292,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
                     // key value\n
                     if (!isLast) {
                         if (!isKey) {
-                            write("\n");
+                            writeln();
                             writeIndent(indent);
                         } else {
                             write(" ");
@@ -301,7 +301,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
                     }
                 } else {
                     if (!isLast and seperateWithNewline) {
-                        write("\n");
+                        writeln();
                         const inc: u32 = if (argOnSameLineAsCmd) 0 else 1;
                         writeIndent(indent + inc);
                     } else if (!isLast) {
@@ -320,7 +320,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
                     std.debug.assert(std.meta.activeTag(gtokens.items[j]) == .BracketedArg);
                     write(gtokens.items[j].text());
                     if (!isLast and seperateWithNewline) {
-                        write("\n");
+                        writeln();
                         const inc: u32 = if (argOnSameLineAsCmd) 0 else 1;
                         writeIndent(indent + inc);
                     } else if (!isLast) {
@@ -330,7 +330,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
                     const isLast = processed == numArgsForMultiArg;
                     write(c.text);
                     if (!isLast) {
-                        write("\n");
+                        writeln();
                         const inc: u32 = if (isPROPERTIES) 0 else 1;
                         writeIndent(indent + inc);
                     }
@@ -344,7 +344,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
 
     if (!isNextTokenNewline() and !isNextTokenParenClose()) {
         newlinesInserted.* = true;
-        write("\n");
+        writeln();
         writeIndent(indent);
     }
     return true;
