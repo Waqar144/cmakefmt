@@ -331,7 +331,7 @@ pub fn lex(source: []const u8, allocator: std.mem.Allocator) !std.ArrayList(Toke
         } else if (std.ascii.isAlphabetic(source[i]) or source[i] == '_') {
             try parseCommand(source, &tokens, &i);
         } else {
-            std.debug.print("Unhandled char {c}\n", .{source[i]});
+            std.debug.print("Unhandled char '{c}', {d}\n", .{ source[i], source[i] });
             return error.ParseError;
         }
     }
