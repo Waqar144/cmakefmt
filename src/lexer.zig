@@ -45,6 +45,14 @@ fn isSpace(source: u8) bool {
     return source == ' ' or source == '\t';
 }
 
+fn isCRLF(source: []const u8, i: u32) bool {
+    return source[i] == '\r' and i + 1 < source.len and source[i + 1] == '\n';
+}
+
+fn isNewline(source: []const u8, i: u32) bool {
+    return source[i] == '\n' or isCRLF(source, i);
+}
+
 // escape_sequence  ::=  escape_identity | escape_encoded | escape_semicolon
 // escape_identity  ::=  '\' <match '[^A-Za-z0-9;]'>
 // escape_encoded   ::=  '\t' | '\r' | '\n'
@@ -63,8 +71,8 @@ fn isEscapeSequence(source: []const u8, i: u32) bool {
 fn consumeWhitespace(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void {
     var j = i.*;
     while (j < source.len and std.ascii.isWhitespace(source[j])) {
-        if (source[j] == '\n') {
-            try readNewline(tokens, &j);
+        if (isNewline(source, j)) {
+            try readNewline(source, tokens, &j);
         } else {
             j += 1;
         }
@@ -72,8 +80,11 @@ fn consumeWhitespace(source: []const u8, tokens: *std.ArrayList(Token), i: *u32)
     i.* = j;
 }
 
-fn readNewline(tokens: *std.ArrayList(Token), i: *u32) !void {
+fn readNewline(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void {
     try tokens.append(Token{ .Newline = .{} });
+    if (isCRLF(source, i.*)) {
+        i.* += 1;
+    }
     i.* += 1;
 }
 
@@ -207,8 +218,8 @@ fn readUnquotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !
                 }
 
                 try tokens.*.append(Token{ .UnquotedArg = .{ .text = source[i.*..j] } });
-                if (source[j] == '\n') {
-                    try readNewline(tokens, &j);
+                if (isNewline(source, j)) {
+                    try readNewline(source, tokens, &j);
                 } else if (source[j] != '(' and source[j] != ')' and source[j] != '#') {
                     j += 1;
                 }
@@ -239,8 +250,8 @@ fn parseArgs(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void {
     // argument ::=  bracket_argument | quoted_argument | unquoted_argument
     while (j < source.len) {
         if (std.ascii.isWhitespace(source[j])) {
-            if (source[j] == '\n') {
-                try readNewline(tokens, &j);
+            if (isNewline(source, j)) {
+                try readNewline(source, tokens, &j);
                 continue;
             }
             j += 1;
@@ -324,8 +335,8 @@ pub fn lex(source: []const u8, allocator: std.mem.Allocator) !std.ArrayList(Toke
     while (i < source.len) {
         if (isSpace(source[i])) {
             i += 1;
-        } else if (source[i] == '\n') {
-            try readNewline(&tokens, &i);
+        } else if (isNewline(source, i)) {
+            try readNewline(source, &tokens, &i);
         } else if (source[i] == '#') {
             try readComment(source, &tokens, &i);
         } else if (std.ascii.isAlphabetic(source[i]) or source[i] == '_') {

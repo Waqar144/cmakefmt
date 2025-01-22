@@ -288,3 +288,18 @@ test "not bracketed arg" {
     };
     try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
+
+test "crlf" {
+    const t = std.testing;
+    const source = "cmd([arg])\r\n";
+    var tokens = try lexer.lex(source, std.testing.allocator);
+    defer tokens.deinit();
+    const expectedTokens = [_]lexer.Token{
+        .{ .Cmd = .{ .text = "cmd" } },
+        .{ .Paren = .{ .opener = true } },
+        .{ .UnquotedArg = .{ .text = "[arg]" } },
+        .{ .Paren = .{ .opener = false } },
+        .{ .Newline = .{ } },
+    };
+    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+}
