@@ -49,7 +49,8 @@ pub fn main() !void {
     };
 
     const tokens = try lexer.lex(buf, allocator);
-    formatter.format(tokens, buf.len, options);
+    const hasCRLF = std.mem.indexOf(u8, buf, "\r\n") != null;
+    formatter.format(tokens, buf.len, options, hasCRLF);
 }
 
 test {

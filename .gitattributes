@@ -1,1 +1,3 @@
 * text eol=lf
+test/test.crlf.cmake text eol=crlf
+test/test.crlf.expected.cmake test eol=crlf

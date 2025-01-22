@@ -9,6 +9,7 @@ var currentTokenIndex: *u32 = undefined;
 var gtokens: *const std.ArrayList(lex.Token) = undefined;
 var gOutBuffer: *std.ArrayList(u8) = undefined;
 var prevWasNewline: bool = false;
+var useCRLF = false;
 
 fn strequal(a: []const u8, b: []const u8) bool {
     return std.mem.eql(u8, a, b);
@@ -23,7 +24,7 @@ fn write(text: []const u8) void {
 }
 
 fn writeln() void {
-    write("\n");
+    write(if (useCRLF) "\r\n" else "\n");
     prevWasNewline = true;
 }
 
@@ -417,10 +418,12 @@ fn handleNewline() void {
     writeIndent(toIndent);
 }
 
-pub fn format(tokens: std.ArrayList(lex.Token), inFileSize: usize, options: Options) void {
+pub fn format(tokens: std.ArrayList(lex.Token), inFileSize: usize, options: Options, sourceHasCRLF: bool) void {
     var i: u32 = 0;
     currentTokenIndex = &i;
     gtokens = &tokens;
+
+    useCRLF = sourceHasCRLF;
 
     // Write formatted text to a buffer
     var formattedText = std.ArrayList(u8).initCapacity(tokens.allocator, inFileSize + (inFileSize / 2)) catch |err| {
