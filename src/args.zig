@@ -1,4 +1,5 @@
 const std = @import("std");
+const mem = std.mem;
 
 pub fn printHelp() !void {
     _ = try std.io.getStdOut().writeAll(
@@ -29,9 +30,9 @@ pub fn parseArgs(args: *std.process.ArgIterator) Options {
     var options: Options = .{ .help = false, .inplace = false, .filename = "" };
     _ = args.next(); // skip first arg
     while (args.next()) |arg| {
-        if (std.mem.eql(u8, arg, "-i")) {
+        if (mem.eql(u8, arg, "-i")) {
             options.inplace = true;
-        } else if (std.mem.eql(u8, arg, "-h")) {
+        } else if (mem.eql(u8, arg, "-h")) {
             options.help = true;
         } else {
             options.filename = arg;

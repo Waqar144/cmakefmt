@@ -1,5 +1,7 @@
 const std = @import("std");
+const mem = std.mem;
 const lexer = @import("lexer.zig");
+const util = @import("u8_utils.zig");
 
 const ParseArgKind = enum {
     PARSE_ARGV,
@@ -19,7 +21,7 @@ const KeywordData = struct {
 
 fn contains(arr: []const []const u8, needle: []const u8) bool {
     for (arr) |item|
-        if (std.mem.eql(u8, item, needle)) return true;
+        if (mem.eql(u8, item, needle)) return true;
     return false;
 }
 
@@ -40,7 +42,7 @@ pub fn main() !void {
     try generate(allocator, args[1], true);
 }
 
-fn generate(allocator: std.mem.Allocator, dirPath: []const u8, skipPrivateFns: bool) !void {
+fn generate(allocator: mem.Allocator, dirPath: []const u8, skipPrivateFns: bool) !void {
     const dir = std.fs.cwd().openDir(dirPath, .{ .iterate = true }) catch |err| {
         std.log.err("Failed to open dir: {s}\n", .{@errorName(err)});
         std.process.exit(1);
@@ -59,7 +61,7 @@ fn generate(allocator: std.mem.Allocator, dirPath: []const u8, skipPrivateFns: b
             continue;
         };
 
-        if (!(std.mem.eql(u8, "CMakeLists.txt", d.basename) or std.mem.endsWith(u8, d.basename, ".cmake"))) {
+        if (!(mem.eql(u8, "CMakeLists.txt", d.basename) or mem.endsWith(u8, d.basename, ".cmake"))) {
             continue;
         }
 
@@ -77,7 +79,7 @@ fn generate(allocator: std.mem.Allocator, dirPath: []const u8, skipPrivateFns: b
         while (i < tokens.items.len) : (i += 1) {
             switch (tokens.items[i]) {
                 .Cmd => |c| {
-                    if (std.mem.eql(u8, "function", c.text)) {
+                    if (mem.eql(u8, "function", c.text)) {
                         infunction = true;
                         var j = i + 1;
                         while (j < tokens.items.len) : (j += 1) {
@@ -95,7 +97,7 @@ fn generate(allocator: std.mem.Allocator, dirPath: []const u8, skipPrivateFns: b
                         }
 
                         // if it starts with _ we assume its private
-                        if (skipPrivateFns and (std.mem.startsWith(u8, functionName, "_") or std.mem.startsWith(u8, functionName, "qt_internal"))) {
+                        if (skipPrivateFns and (mem.startsWith(u8, functionName, "_") or mem.startsWith(u8, functionName, "qt_internal"))) {
                             continue;
                         }
 
@@ -114,7 +116,7 @@ fn generate(allocator: std.mem.Allocator, dirPath: []const u8, skipPrivateFns: b
     }
 }
 
-pub fn parseFunction(allocator: std.mem.Allocator, tokens: std.ArrayList(lexer.Token), i: *u32) !KeywordData {
+pub fn parseFunction(allocator: mem.Allocator, tokens: std.ArrayList(lexer.Token), i: *u32) !KeywordData {
     var j = i.*;
     var variables = std.ArrayList(Variable).init(allocator);
     var keywordData: KeywordData = .{
@@ -126,15 +128,15 @@ pub fn parseFunction(allocator: std.mem.Allocator, tokens: std.ArrayList(lexer.T
     while (j < tokens.items.len) : (j += 1) {
         switch (tokens.items[j]) {
             .Cmd => |c| {
-                if (std.mem.eql(u8, c.text, "set")) {
+                if (mem.eql(u8, c.text, "set")) {
                     j += 1;
                     const variable = try parseSet(allocator, tokens, &j);
                     try variables.append(variable);
-                } else if (std.mem.eql(u8, c.text, "cmake_parse_arguments")) {
+                } else if (mem.eql(u8, c.text, "cmake_parse_arguments")) {
                     // parse it as a variable
                     j += 1;
                     const parseArgs = try parseSet(allocator, tokens, &j);
-                    const kind = if (std.mem.eql(u8, parseArgs.name, "PARSE_ARGV")) ParseArgKind.PARSE_ARGV else ParseArgKind.PREFIX;
+                    const kind = if (mem.eql(u8, parseArgs.name, "PARSE_ARGV")) ParseArgKind.PARSE_ARGV else ParseArgKind.PREFIX;
 
                     var options: []const u8 = undefined;
                     var oneValue: []const u8 = undefined;
@@ -170,7 +172,7 @@ pub fn parseFunction(allocator: std.mem.Allocator, tokens: std.ArrayList(lexer.T
     return keywordData;
 }
 
-pub fn parseSet(allocator: std.mem.Allocator, tokens: std.ArrayList(lexer.Token), i: *u32) !Variable {
+pub fn parseSet(allocator: mem.Allocator, tokens: std.ArrayList(lexer.Token), i: *u32) !Variable {
     const argText = struct {
         fn func(token: lexer.Token) []const u8 {
             switch (token) {
@@ -217,7 +219,7 @@ pub fn parseSet(allocator: std.mem.Allocator, tokens: std.ArrayList(lexer.Token)
 }
 
 pub fn resolveArguments(
-    allocator: std.mem.Allocator,
+    allocator: mem.Allocator,
     variables: std.ArrayList(Variable),
     options: []const u8,
     oneValue: []const u8,
@@ -231,17 +233,17 @@ pub fn resolveArguments(
 }
 
 pub fn resolveArgument(
-    allocator: std.mem.Allocator,
+    allocator: mem.Allocator,
     variables: std.ArrayList(Variable),
     arg: []const u8,
 ) !std.ArrayList([]const u8) {
     var res = std.ArrayList([]const u8).init(allocator);
 
-    if (std.mem.startsWith(u8, arg, "${") and std.mem.endsWith(u8, arg, "}")) {
+    if (mem.startsWith(u8, arg, "${") and mem.endsWith(u8, arg, "}")) {
         // resolve variable
         const inner = arg[2 .. arg.len - 1];
         for (variables.items) |v| {
-            if (std.mem.eql(u8, inner, v.name)) {
+            if (mem.eql(u8, inner, v.name)) {
                 for (v.values.items) |i| {
                     try res.append(i);
                 }
@@ -249,8 +251,8 @@ pub fn resolveArgument(
             }
         }
     } else if (arg.len > 0) {
-        if (std.mem.indexOf(u8, arg, ";") != null) {
-            var splitIt = std.mem.split(u8, arg, ";");
+        if (mem.indexOf(u8, arg, ";") != null) {
+            var splitIt = mem.split(u8, arg, ";");
             while (splitIt.next()) |splitted| {
                 try res.append(splitted);
             }
@@ -262,7 +264,7 @@ pub fn resolveArgument(
     return res;
 }
 
-pub fn dump(allocator: std.mem.Allocator, functionArgData: std.StringHashMap(KeywordData)) !void {
+pub fn dump(allocator: mem.Allocator, functionArgData: std.StringHashMap(KeywordData)) !void {
     var it = functionArgData.iterator();
     while (it.next()) |kv| {
         var value = kv.value_ptr.*;
@@ -270,7 +272,7 @@ pub fn dump(allocator: std.mem.Allocator, functionArgData: std.StringHashMap(Key
             continue;
 
         // merge options from qt5 / qt6
-        if (std.mem.startsWith(u8, kv.key_ptr.*, "qt_")) {
+        if (mem.startsWith(u8, kv.key_ptr.*, "qt_")) {
             // find qt6/qt5 counterparts
             const key = kv.key_ptr.*;
             const qt5 = try std.fmt.allocPrint(allocator, "qt5_{s}", .{key[3..]});
@@ -317,16 +319,15 @@ pub fn dump(allocator: std.mem.Allocator, functionArgData: std.StringHashMap(Key
                 }
                 std.debug.print(".{s} = &.{{", .{name});
                 for (values.items, 0..) |kw, idx| {
-                    var splitIt = std.mem.split(u8, kw, ";");
+                    var splitIt = mem.split(u8, kw, ";");
                     while (splitIt.next()) |w| {
-                        if (!std.mem.startsWith(u8, w, "\""))
+                        if (!mem.startsWith(u8, w, "\""))
                             std.debug.print("\"", .{});
                         std.debug.print("{s}", .{w});
-                        if (!std.mem.endsWith(u8, w, "\""))
+                        if (!mem.endsWith(u8, w, "\""))
                             std.debug.print("\"", .{});
-                        if (splitIt.peek() != null) {
+                        if (splitIt.peek() != null)
                             std.debug.print(", ", .{});
-                        }
                     }
                     if (idx + 1 < values.items.len) {
                         std.debug.print(", ", .{});

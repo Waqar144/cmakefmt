@@ -1,4 +1,5 @@
 const std = @import("std");
+const mem = std.mem;
 const emptyArgs: []const []const u8 = &.{};
 
 pub const CommandKeywords = struct {
@@ -10,20 +11,20 @@ pub const CommandKeywords = struct {
     options: []const []const u8 = &.{},
 
     pub fn hasArgWithValueKeyword(self: CommandKeywords, word: []const u8) bool {
-        for (self.multi) |k| if (std.mem.eql(u8, k, word)) return true;
-        for (self.one) |k| if (std.mem.eql(u8, k, word)) return true;
+        for (self.multi) |k| if (mem.eql(u8, k, word)) return true;
+        for (self.one) |k| if (mem.eql(u8, k, word)) return true;
         return false;
     }
 
     pub fn isOneValueArg(self: CommandKeywords, word: []const u8) bool {
-        for (self.one) |k| if (std.mem.eql(u8, k, word)) return true;
+        for (self.one) |k| if (mem.eql(u8, k, word)) return true;
         return false;
     }
 
     pub fn contains(self: CommandKeywords, word: []const u8) bool {
-        for (self.multi) |k| if (std.mem.eql(u8, k, word)) return true;
-        for (self.options) |k| if (std.mem.eql(u8, k, word)) return true;
-        for (self.one) |k| if (std.mem.eql(u8, k, word)) return true;
+        for (self.multi) |k| if (mem.eql(u8, k, word)) return true;
+        for (self.options) |k| if (mem.eql(u8, k, word)) return true;
+        for (self.one) |k| if (mem.eql(u8, k, word)) return true;
         return false;
     }
 };

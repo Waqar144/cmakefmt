@@ -1,4 +1,5 @@
 const std = @import("std");
+const mem = std.mem;
 const lex = @import("lexer.zig");
 const builtin_commands = @import("builtin_commands.zig");
 const Options = @import("args.zig").Options;
@@ -12,15 +13,15 @@ var prevWasNewline: bool = false;
 var useCRLF = false;
 
 fn strequal(a: []const u8, b: []const u8) bool {
-    return std.mem.eql(u8, a, b);
+    return mem.eql(u8, a, b);
 }
 
 fn write(text: []const u8) void {
     _ = gOutBuffer.appendSlice(text) catch |err| {
         std.log.err("Error when writing {s}", .{@errorName(err)});
     };
-    if (std.mem.trim(u8, text, " ").len == 0) return;
-    prevWasNewline = std.mem.endsWith(u8, text, "\n");
+    if (mem.trim(u8, text, " ").len == 0) return;
+    prevWasNewline = mem.endsWith(u8, text, "\n");
 }
 
 fn writeln() void {
@@ -39,7 +40,7 @@ fn writeIndent(indent_level: u32) void {
 fn isControlStructureBegin(text: []const u8) bool {
     const controlStructs = [_][]const u8{ "if", "foreach", "function", "macro", "while", "block" };
     for (controlStructs) |c| {
-        if (std.mem.eql(u8, c, text))
+        if (strequal(c, text))
             return true;
     }
     return false;
@@ -48,7 +49,7 @@ fn isControlStructureBegin(text: []const u8) bool {
 fn isControlStructureEnd(text: []const u8) bool {
     const controlStructs = [_][]const u8{ "endif", "endforeach", "endfunction", "endmacro", "endwhile", "endblock" };
     for (controlStructs) |c| {
-        if (std.mem.eql(u8, c, text))
+        if (strequal(c, text))
             return true;
     }
     return false;
@@ -62,7 +63,7 @@ fn peekNext() ?lex.Token {
 
 fn isElse() bool {
     const nextToken = peekNext();
-    return nextToken != null and std.meta.activeTag(nextToken.?) == .Cmd and std.mem.eql(u8, nextToken.?.Cmd.text, "else");
+    return nextToken != null and std.meta.activeTag(nextToken.?) == .Cmd and strequal(nextToken.?.Cmd.text, "else");
 }
 
 fn isNextTokenNewline() bool {
@@ -89,7 +90,7 @@ fn nextArgEquals(text: []const u8) bool {
     var j = currentTokenIndex.* + 1;
     while (j < gtokens.items.len) : (j += 1) {
         switch (gtokens.items[j]) {
-            .UnquotedArg, .QuotedArg, .BracketedArg => return std.mem.eql(u8, text, gtokens.items[j].text()),
+            .UnquotedArg, .QuotedArg, .BracketedArg => return strequal(text, gtokens.items[j].text()),
             .Newline => continue,
             else => return false,
         }
@@ -372,7 +373,7 @@ fn handleComment(a: lex.Comment) void {
     if (!prevWasNewline and (gOutBuffer.items.len > 0 and gOutBuffer.getLast() != ' ')) {
         write(" ");
     }
-    write(std.mem.trimLeft(u8, a.text, " "));
+    write(mem.trimLeft(u8, a.text, " "));
 
     if (a.bracketed) {
         currentTokenIndex.* += 1;

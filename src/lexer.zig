@@ -1,4 +1,5 @@
 const std = @import("std");
+const mem = std.mem;
 
 pub const Command = struct { text: []const u8 };
 pub const Paren = struct { opener: bool };
@@ -38,7 +39,7 @@ pub const Token = union(enum) {
 };
 
 fn countEquals(source: []const u8, from: u32) u32 {
-    return @intCast((std.mem.indexOfNonePos(u8, source, from, "=") orelse from) - from);
+    return @intCast((mem.indexOfNonePos(u8, source, from, "=") orelse from) - from);
 }
 
 fn isSpace(source: u8) bool {
@@ -117,7 +118,7 @@ fn readComment(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !void
         } else {
             // pop off the '#'
             const commentHash = tokens.pop();
-            std.debug.assert(std.mem.eql(u8, commentHash.Comment.text, "#"));
+            std.debug.assert(mem.eql(u8, commentHash.Comment.text, "#"));
         }
     }
 
@@ -327,7 +328,7 @@ fn parseCommand(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !voi
     i.* = j;
 }
 
-pub fn lex(source: []const u8, allocator: std.mem.Allocator) !std.ArrayList(Token) {
+pub fn lex(source: []const u8, allocator: mem.Allocator) !std.ArrayList(Token) {
     var i: u32 = 0;
     var tokens = std.ArrayList(Token).init(allocator);
     errdefer tokens.deinit();
