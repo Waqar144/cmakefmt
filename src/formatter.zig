@@ -7,7 +7,7 @@ const Options = @import("args.zig").Options;
 var indent: u32 = 0;
 const indentWidth = 4;
 var currentTokenIndex: *u32 = undefined;
-var gtokens: *const std.ArrayList(lex.Token) = undefined;
+var gTokens: []const lex.Token = undefined;
 var gOutBuffer: *std.ArrayList(u8) = undefined;
 var prevWasNewline: bool = false;
 var useCRLF = false;
@@ -56,8 +56,8 @@ fn isControlStructureEnd(text: []const u8) bool {
 }
 
 fn peekNext() ?lex.Token {
-    if (currentTokenIndex.* + 1 < gtokens.items.len)
-        return gtokens.items[currentTokenIndex.* + 1];
+    if (currentTokenIndex.* + 1 < gTokens.len)
+        return gTokens[currentTokenIndex.* + 1];
     return null;
 }
 
@@ -88,9 +88,9 @@ fn isNextTokenComment() bool {
 
 fn nextArgEquals(text: []const u8) bool {
     var j = currentTokenIndex.* + 1;
-    while (j < gtokens.items.len) : (j += 1) {
-        switch (gtokens.items[j]) {
-            .UnquotedArg, .QuotedArg, .BracketedArg => return strequal(text, gtokens.items[j].text()),
+    while (j < gTokens.len) : (j += 1) {
+        switch (gTokens[j]) {
+            .UnquotedArg, .QuotedArg, .BracketedArg => return strequal(text, gTokens[j].text()),
             .Newline => continue,
             else => return false,
         }
@@ -101,8 +101,8 @@ fn nextArgEquals(text: []const u8) bool {
 fn countArgsInLine(fromTokenIndex: u32) u32 {
     var numArgsInLine: u32 = 0;
     var j: u32 = fromTokenIndex;
-    while (j < gtokens.items.len) : (j += 1) {
-        switch (gtokens.items[j]) {
+    while (j < gTokens.len) : (j += 1) {
+        switch (gTokens[j]) {
             .UnquotedArg, .QuotedArg, .BracketedArg => numArgsInLine += 1,
             .Newline => break,
             else => continue,
@@ -113,15 +113,15 @@ fn countArgsInLine(fromTokenIndex: u32) u32 {
 
 // compoundArg := ( arg+ )
 fn handleCompoundArg() void {
-    std.debug.assert(std.meta.activeTag(gtokens.items[currentTokenIndex.*]) == .Paren);
+    std.debug.assert(std.meta.activeTag(gTokens[currentTokenIndex.*]) == .Paren);
     currentTokenIndex.* += 1;
     var parenDepth: i32 = 1;
 
     // This function atm is too simple
     // it just keeps all the args on a single line
 
-    while (currentTokenIndex.* < gtokens.items.len) {
-        switch (gtokens.items[currentTokenIndex.*]) {
+    while (currentTokenIndex.* < gTokens.len) {
+        switch (gTokens[currentTokenIndex.*]) {
             .Cmd => |c| std.debug.panic("Command in unexpected position {s}", .{c.text}),
             .Paren => |p| {
                 parenDepth += if (p.opener) 1 else -1;
@@ -133,13 +133,13 @@ fn handleCompoundArg() void {
                 } else if (p.opener) {
                     handleCompoundArg();
 
-                    std.debug.assert(std.meta.activeTag(gtokens.items[currentTokenIndex.*]) == .Paren and
-                        gtokens.items[currentTokenIndex.*].Paren.opener == false);
+                    std.debug.assert(std.meta.activeTag(gTokens[currentTokenIndex.*]) == .Paren and
+                        gTokens[currentTokenIndex.*].Paren.opener == false);
                     parenDepth -= 1;
                 }
             },
             .UnquotedArg, .QuotedArg, .BracketedArg => {
-                const a = gtokens.items[currentTokenIndex.*];
+                const a = gTokens[currentTokenIndex.*];
                 write(a.text());
 
                 if (!isNextTokenParenClose()) {
@@ -166,8 +166,8 @@ fn handleCommand(cmd: lex.Command) void {
     var numArgsInLine: u32 = countArgsInLine(currentTokenIndex.* + 1);
     var argTextLen: usize = 0;
 
-    while (currentTokenIndex.* < gtokens.items.len) {
-        switch (gtokens.items[currentTokenIndex.*]) {
+    while (currentTokenIndex.* < gTokens.len) {
+        switch (gTokens[currentTokenIndex.*]) {
             .Cmd => |c| {
                 std.log.err("command in unexpected place, probably a bug: {s} {s}\n", .{ cmd.text, c.text });
                 std.process.exit(1);
@@ -189,13 +189,13 @@ fn handleCommand(cmd: lex.Command) void {
                 } else if (bracketDepth > 1 and p.opener) {
                     handleCompoundArg();
 
-                    std.debug.assert(std.meta.activeTag(gtokens.items[currentTokenIndex.*]) == .Paren and
-                        gtokens.items[currentTokenIndex.*].Paren.opener == false);
+                    std.debug.assert(std.meta.activeTag(gTokens[currentTokenIndex.*]) == .Paren and
+                        gTokens[currentTokenIndex.*].Paren.opener == false);
                     bracketDepth -= 1;
                 }
             },
             .UnquotedArg, .QuotedArg, .BracketedArg => blk: {
-                const argText = gtokens.items[currentTokenIndex.*].text();
+                const argText = gTokens[currentTokenIndex.*].text();
                 if (maybeCommandKeywords) |commandKeywords| {
                     if (commandKeywords.hasArgWithValueKeyword(argText)) {
                         var newlinesInserted: bool = false;
@@ -209,7 +209,7 @@ fn handleCommand(cmd: lex.Command) void {
 
                 write(argText);
                 argTextLen += argText.len + 1; // 1 for space
-                const nextArgLen = if (currentTokenIndex.* + 1 < gtokens.items.len and !isNextTokenNewline()) peekNext().?.text().len else 0;
+                const nextArgLen = if (currentTokenIndex.* + 1 < gTokens.len and !isNextTokenNewline()) peekNext().?.text().len else 0;
 
                 // if there are > 5 args on a line, then split them with newlines
                 if ((argTextLen + nextArgLen + (indent * indentWidth) > 120 or numArgsInLine > 5) and !isNextTokenNewline() and !isNextTokenParen()) {
@@ -257,21 +257,21 @@ fn handleCommand(cmd: lex.Command) void {
 
 fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameLineAsCmd: bool, newlinesInserted: *bool, currentBracketDepth: i32) bool {
     // count multi args
-    const isOneValueArg = commandKeywords.isOneValueArg(gtokens.items[currentTokenIndex.*].text());
+    const isOneValueArg = commandKeywords.isOneValueArg(gTokens[currentTokenIndex.*].text());
 
     var k = currentTokenIndex.* + 1;
     var bracketDepth = currentBracketDepth;
     var numArgsForMultiArg: u32 = 0;
-    while (k < gtokens.items.len) : (k += 1) {
-        const arg = gtokens.items[k];
+    while (k < gTokens.len) : (k += 1) {
+        const arg = gTokens[k];
         switch (arg) {
             .UnquotedArg, .QuotedArg, .BracketedArg => {
                 if (commandKeywords.contains(arg.text()))
                     break;
                 numArgsForMultiArg += 1;
                 if (isOneValueArg) {
-                    if (k + 1 < gtokens.items.len) {
-                        const next = gtokens.items[k + 1];
+                    if (k + 1 < gTokens.len) {
+                        const next = gTokens[k + 1];
                         if (std.meta.activeTag(next) == .Comment) {
                             numArgsForMultiArg += 1;
                             if (next.Comment.bracketed) numArgsForMultiArg += 1;
@@ -306,9 +306,9 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
     }
 
     var j = currentTokenIndex.*;
-    write(gtokens.items[j].text());
-    const isPROPERTIES = strequal(gtokens.items[j].text(), "PROPERTIES");
-    const isCOMMAND = strequal(gtokens.items[j].text(), "COMMAND");
+    write(gTokens[j].text());
+    const isPROPERTIES = strequal(gTokens[j].text(), "PROPERTIES");
+    const isCOMMAND = strequal(gTokens[j].text(), "COMMAND");
     j += 1;
 
     // separate args with newline if there are more than 3 args
@@ -332,7 +332,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
     var isKey = true;
     var processed: u32 = 0;
     while (processed < numArgsForMultiArg) : (j += 1) {
-        const arg = gtokens.items[j];
+        const arg = gTokens[j];
         switch (arg) {
             .UnquotedArg, .QuotedArg, .BracketedArg => {
                 const isLast = processed + 1 == numArgsForMultiArg;
@@ -367,8 +367,8 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
                     j += 1;
                     processed += 1;
                     const isLast = processed == numArgsForMultiArg;
-                    std.debug.assert(std.meta.activeTag(gtokens.items[j]) == .BracketedArg);
-                    write(gtokens.items[j].text());
+                    std.debug.assert(std.meta.activeTag(gTokens[j]) == .BracketedArg);
+                    write(gTokens[j].text());
                     if (!isLast and seperateWithNewline) {
                         writeln();
                         const inc: u32 = if (argOnSameLineAsCmd) 0 else 1;
@@ -416,7 +416,7 @@ fn handleParen(a: lex.Paren) void {
 }
 
 fn handleComment(a: lex.Comment) void {
-    //     const atStartOfLine = currentTokenIndex.* == 0 or currentTokenIndex.* > 0 and gtokens.items[currentTokenIndex.* - 1].isNewLine();
+    //     const atStartOfLine = currentTokenIndex.* == 0 or currentTokenIndex.* > 0 and gtokens[currentTokenIndex.* - 1].isNewLine();
     // add a space between prev element and comment if we are not at the start of line
     if (!prevWasNewline and (gOutBuffer.items.len > 0 and gOutBuffer.getLast() != ' ')) {
         write(" ");
@@ -425,7 +425,7 @@ fn handleComment(a: lex.Comment) void {
 
     if (a.bracketed) {
         currentTokenIndex.* += 1;
-        write(gtokens.items[currentTokenIndex.*].text());
+        write(gTokens[currentTokenIndex.*].text());
     }
 }
 
@@ -433,16 +433,16 @@ fn handleNewline() void {
     writeln();
 
     // allow one more newline
-    if (currentTokenIndex.* + 1 < gtokens.items.len) {
+    if (currentTokenIndex.* + 1 < gTokens.len) {
         var j = currentTokenIndex.*;
-        if (gtokens.items[j + 1].isNewLine()) {
+        if (gTokens[j + 1].isNewLine()) {
             writeln();
 
             // skip the two processed newlines
             j += 2;
 
-            while (j < gtokens.items.len) : (j += 1) {
-                if (!gtokens.items[j].isNewLine())
+            while (j < gTokens.len) : (j += 1) {
+                if (!gTokens[j].isNewLine())
                     break;
             }
             currentTokenIndex.* = j - 1;
@@ -454,13 +454,13 @@ fn handleNewline() void {
     // - the next token is an end block command
     // - the next token is )
     // - the next token is else
-    if (indent > 0 and currentTokenIndex.* + 1 < gtokens.items.len) {
-        const nextToken = gtokens.items[currentTokenIndex.* + 1];
+    if (indent > 0 and currentTokenIndex.* + 1 < gTokens.len) {
+        const nextToken = gTokens[currentTokenIndex.* + 1];
         const tag = std.meta.activeTag(nextToken);
         if ((tag == lex.Token.Cmd and isControlStructureEnd(nextToken.Cmd.text)) or isNextTokenParenClose() or isElse()) {
             toIndent = indent - 1;
         }
-    } else if (currentTokenIndex.* + 1 >= gtokens.items.len) {
+    } else if (currentTokenIndex.* + 1 >= gTokens.len) {
         return;
     }
 
@@ -470,7 +470,7 @@ fn handleNewline() void {
 pub fn format(tokens: std.ArrayList(lex.Token), inFileSize: usize, options: Options, sourceHasCRLF: bool) void {
     var i: u32 = 0;
     currentTokenIndex = &i;
-    gtokens = &tokens;
+    gTokens = tokens.items;
 
     useCRLF = sourceHasCRLF;
 
@@ -482,8 +482,8 @@ pub fn format(tokens: std.ArrayList(lex.Token), inFileSize: usize, options: Opti
     defer formattedText.deinit();
     gOutBuffer = &formattedText;
 
-    while (i < tokens.items.len) {
-        const token = tokens.items[i];
+    while (i < gTokens.len) {
+        const token = gTokens[i];
 
         switch (token) {
             .Cmd => |c| handleCommand(c),
