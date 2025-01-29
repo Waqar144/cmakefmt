@@ -6,7 +6,7 @@ const Options = @import("args.zig").Options;
 
 var indent: u32 = 0;
 const indentWidth = 4;
-var currentTokenIndex: *u32 = undefined;
+var currentTokenIndex: u32 = 0;
 var gTokens: []const lex.Token = undefined;
 var gOutBuffer: *std.ArrayList(u8) = undefined;
 var prevWasNewline: bool = false;
@@ -56,8 +56,8 @@ fn isControlStructureEnd(text: []const u8) bool {
 }
 
 fn peekNext() ?lex.Token {
-    if (currentTokenIndex.* + 1 < gTokens.len)
-        return gTokens[currentTokenIndex.* + 1];
+    if (currentTokenIndex + 1 < gTokens.len)
+        return gTokens[currentTokenIndex + 1];
     return null;
 }
 
@@ -87,7 +87,7 @@ fn isNextTokenComment() bool {
 }
 
 fn nextArgEquals(text: []const u8) bool {
-    var j = currentTokenIndex.* + 1;
+    var j = currentTokenIndex + 1;
     while (j < gTokens.len) : (j += 1) {
         switch (gTokens[j]) {
             .UnquotedArg, .QuotedArg, .BracketedArg => return strequal(text, gTokens[j].text()),
@@ -113,15 +113,15 @@ fn countArgsInLine(fromTokenIndex: u32) u32 {
 
 // compoundArg := ( arg+ )
 fn handleCompoundArg() void {
-    std.debug.assert(std.meta.activeTag(gTokens[currentTokenIndex.*]) == .Paren);
-    currentTokenIndex.* += 1;
+    std.debug.assert(std.meta.activeTag(gTokens[currentTokenIndex]) == .Paren);
+    currentTokenIndex += 1;
     var parenDepth: i32 = 1;
 
     // This function atm is too simple
     // it just keeps all the args on a single line
 
-    while (currentTokenIndex.* < gTokens.len) {
-        switch (gTokens[currentTokenIndex.*]) {
+    while (currentTokenIndex < gTokens.len) {
+        switch (gTokens[currentTokenIndex]) {
             .Cmd => |c| std.debug.panic("Command in unexpected position {s}", .{c.text}),
             .Paren => |p| {
                 parenDepth += if (p.opener) 1 else -1;
@@ -133,13 +133,13 @@ fn handleCompoundArg() void {
                 } else if (p.opener) {
                     handleCompoundArg();
 
-                    std.debug.assert(std.meta.activeTag(gTokens[currentTokenIndex.*]) == .Paren and
-                        gTokens[currentTokenIndex.*].Paren.opener == false);
+                    std.debug.assert(std.meta.activeTag(gTokens[currentTokenIndex]) == .Paren and
+                        gTokens[currentTokenIndex].Paren.opener == false);
                     parenDepth -= 1;
                 }
             },
             .UnquotedArg, .QuotedArg, .BracketedArg => {
-                const a = gTokens[currentTokenIndex.*];
+                const a = gTokens[currentTokenIndex];
                 write(a.text());
 
                 if (!isNextTokenParenClose()) {
@@ -149,7 +149,7 @@ fn handleCompoundArg() void {
             .Comment => |c| handleComment(c),
             .Newline => |_| {},
         }
-        currentTokenIndex.* += 1;
+        currentTokenIndex += 1;
     }
 }
 
@@ -158,16 +158,16 @@ fn handleCommand(cmd: lex.Command) void {
 
     const maybeCommandKeywords = builtin_commands.gCommandMap.get(cmd.text);
 
-    currentTokenIndex.* += 1;
+    currentTokenIndex += 1;
     var bracketDepth: i32 = 0;
     indent += 1;
     // number of new lines that will be found in the block
     var newlines: u32 = 0;
-    var numArgsInLine: u32 = countArgsInLine(currentTokenIndex.* + 1);
+    var numArgsInLine: u32 = countArgsInLine(currentTokenIndex + 1);
     var argTextLen: usize = 0;
 
-    while (currentTokenIndex.* < gTokens.len) {
-        switch (gTokens[currentTokenIndex.*]) {
+    while (currentTokenIndex < gTokens.len) {
+        switch (gTokens[currentTokenIndex]) {
             .Cmd => |c| {
                 std.log.err("command in unexpected place, probably a bug: {s} {s}\n", .{ cmd.text, c.text });
                 std.process.exit(1);
@@ -189,13 +189,13 @@ fn handleCommand(cmd: lex.Command) void {
                 } else if (bracketDepth > 1 and p.opener) {
                     handleCompoundArg();
 
-                    std.debug.assert(std.meta.activeTag(gTokens[currentTokenIndex.*]) == .Paren and
-                        gTokens[currentTokenIndex.*].Paren.opener == false);
+                    std.debug.assert(std.meta.activeTag(gTokens[currentTokenIndex]) == .Paren and
+                        gTokens[currentTokenIndex].Paren.opener == false);
                     bracketDepth -= 1;
                 }
             },
             .UnquotedArg, .QuotedArg, .BracketedArg => blk: {
-                const argText = gTokens[currentTokenIndex.*].text();
+                const argText = gTokens[currentTokenIndex].text();
                 if (maybeCommandKeywords) |commandKeywords| {
                     if (commandKeywords.hasArgWithValueKeyword(argText)) {
                         var newlinesInserted: bool = false;
@@ -209,7 +209,7 @@ fn handleCommand(cmd: lex.Command) void {
 
                 write(argText);
                 argTextLen += argText.len + 1; // 1 for space
-                const nextArgLen = if (currentTokenIndex.* + 1 < gTokens.len and !isNextTokenNewline()) peekNext().?.text().len else 0;
+                const nextArgLen = if (currentTokenIndex + 1 < gTokens.len and !isNextTokenNewline()) peekNext().?.text().len else 0;
 
                 // if there are > 5 args on a line, then split them with newlines
                 if ((argTextLen + nextArgLen + (indent * indentWidth) > 120 or numArgsInLine > 5) and !isNextTokenNewline() and !isNextTokenParen()) {
@@ -230,12 +230,12 @@ fn handleCommand(cmd: lex.Command) void {
                     break :blk;
                 handleNewline();
                 newlines += 1;
-                numArgsInLine = countArgsInLine(currentTokenIndex.* + 1);
+                numArgsInLine = countArgsInLine(currentTokenIndex + 1);
                 argTextLen = 0;
             },
         }
 
-        currentTokenIndex.* += 1;
+        currentTokenIndex += 1;
     }
 
     if (bracketDepth != 0) {
@@ -257,9 +257,9 @@ fn handleCommand(cmd: lex.Command) void {
 
 fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameLineAsCmd: bool, newlinesInserted: *bool, currentBracketDepth: i32) bool {
     // count multi args
-    const isOneValueArg = commandKeywords.isOneValueArg(gTokens[currentTokenIndex.*].text());
+    const isOneValueArg = commandKeywords.isOneValueArg(gTokens[currentTokenIndex].text());
 
-    var k = currentTokenIndex.* + 1;
+    var k = currentTokenIndex + 1;
     var bracketDepth = currentBracketDepth;
     var numArgsForMultiArg: u32 = 0;
     while (k < gTokens.len) : (k += 1) {
@@ -305,7 +305,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
         return false;
     }
 
-    var j = currentTokenIndex.*;
+    var j = currentTokenIndex;
     write(gTokens[j].text());
     const isPROPERTIES = strequal(gTokens[j].text(), "PROPERTIES");
     const isCOMMAND = strequal(gTokens[j].text(), "COMMAND");
@@ -390,7 +390,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
         }
     }
 
-    currentTokenIndex.* = j - 1;
+    currentTokenIndex = j - 1;
 
     if (!isNextTokenNewline() and !isNextTokenParenClose()) {
         newlinesInserted.* = true;
@@ -416,7 +416,7 @@ fn handleParen(a: lex.Paren) void {
 }
 
 fn handleComment(a: lex.Comment) void {
-    //     const atStartOfLine = currentTokenIndex.* == 0 or currentTokenIndex.* > 0 and gtokens[currentTokenIndex.* - 1].isNewLine();
+    //     const atStartOfLine = currentTokenIndex == 0 or currentTokenIndex > 0 and gtokens[currentTokenIndex - 1].isNewLine();
     // add a space between prev element and comment if we are not at the start of line
     if (!prevWasNewline and (gOutBuffer.items.len > 0 and gOutBuffer.getLast() != ' ')) {
         write(" ");
@@ -424,8 +424,8 @@ fn handleComment(a: lex.Comment) void {
     write(mem.trimLeft(u8, a.text, " "));
 
     if (a.bracketed) {
-        currentTokenIndex.* += 1;
-        write(gTokens[currentTokenIndex.*].text());
+        currentTokenIndex += 1;
+        write(gTokens[currentTokenIndex].text());
     }
 }
 
@@ -433,8 +433,8 @@ fn handleNewline() void {
     writeln();
 
     // allow one more newline
-    if (currentTokenIndex.* + 1 < gTokens.len) {
-        var j = currentTokenIndex.*;
+    if (currentTokenIndex + 1 < gTokens.len) {
+        var j = currentTokenIndex;
         if (gTokens[j + 1].isNewLine()) {
             writeln();
 
@@ -445,7 +445,7 @@ fn handleNewline() void {
                 if (!gTokens[j].isNewLine())
                     break;
             }
-            currentTokenIndex.* = j - 1;
+            currentTokenIndex = j - 1;
         }
     }
 
@@ -454,13 +454,13 @@ fn handleNewline() void {
     // - the next token is an end block command
     // - the next token is )
     // - the next token is else
-    if (indent > 0 and currentTokenIndex.* + 1 < gTokens.len) {
-        const nextToken = gTokens[currentTokenIndex.* + 1];
+    if (indent > 0 and currentTokenIndex + 1 < gTokens.len) {
+        const nextToken = gTokens[currentTokenIndex + 1];
         const tag = std.meta.activeTag(nextToken);
         if ((tag == lex.Token.Cmd and isControlStructureEnd(nextToken.Cmd.text)) or isNextTokenParenClose() or isElse()) {
             toIndent = indent - 1;
         }
-    } else if (currentTokenIndex.* + 1 >= gTokens.len) {
+    } else if (currentTokenIndex + 1 >= gTokens.len) {
         return;
     }
 
@@ -468,10 +468,8 @@ fn handleNewline() void {
 }
 
 pub fn format(tokens: std.ArrayList(lex.Token), inFileSize: usize, options: Options, sourceHasCRLF: bool) void {
-    var i: u32 = 0;
-    currentTokenIndex = &i;
+    currentTokenIndex = 0;
     gTokens = tokens.items;
-
     useCRLF = sourceHasCRLF;
 
     // Write formatted text to a buffer
@@ -482,8 +480,8 @@ pub fn format(tokens: std.ArrayList(lex.Token), inFileSize: usize, options: Opti
     defer formattedText.deinit();
     gOutBuffer = &formattedText;
 
-    while (i < gTokens.len) {
-        const token = gTokens[i];
+    while (currentTokenIndex < gTokens.len) {
+        const token = gTokens[currentTokenIndex];
 
         switch (token) {
             .Cmd => |c| handleCommand(c),
@@ -495,7 +493,7 @@ pub fn format(tokens: std.ArrayList(lex.Token), inFileSize: usize, options: Opti
             .Newline => |_| handleNewline(),
         }
 
-        i += 1;
+        currentTokenIndex += 1;
     }
 
     if (!options.inplace) {
