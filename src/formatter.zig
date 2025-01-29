@@ -12,6 +12,19 @@ var gOutBuffer: *std.ArrayList(u8) = undefined;
 var prevWasNewline: bool = false;
 var useCRLF = false;
 
+var errBuf: [1024]u8 = undefined;
+pub fn failFmt(comptime fmt: []const u8, args: anytype) noreturn {
+    fail(std.fmt.bufPrint(errBuf[0..], fmt, args) catch {
+        std.log.err(fmt, args);
+        std.process.exit(1);
+    }, error.FormattingError);
+}
+
+fn fail(msg: []const u8, err: anyerror) noreturn {
+    std.log.err("{s}: {s}\n", .{ @errorName(err), msg });
+    std.process.exit(1);
+}
+
 fn strequal(a: []const u8, b: []const u8) bool {
     return mem.eql(u8, a, b);
 }
@@ -122,7 +135,7 @@ fn handleCompoundArg() void {
 
     while (currentTokenIndex < gTokens.len) {
         switch (gTokens[currentTokenIndex]) {
-            .Cmd => |c| std.debug.panic("Command in unexpected position {s}", .{c.text}),
+            .Cmd => |c| failFmt("command in unexpected place, probably a bug: {s}\n", .{c.text}),
             .Paren => |p| {
                 parenDepth += if (p.opener) 1 else -1;
 
@@ -168,10 +181,7 @@ fn handleCommand(cmd: lex.Command) void {
 
     while (currentTokenIndex < gTokens.len) {
         switch (gTokens[currentTokenIndex]) {
-            .Cmd => |c| {
-                std.log.err("command in unexpected place, probably a bug: {s} {s}\n", .{ cmd.text, c.text });
-                std.process.exit(1);
-            },
+            .Cmd => |c| failFmt("command in unexpected place, probably a bug: {s} {s}", .{ cmd.text, c.text }),
             .Paren => |p| {
                 bracketDepth += if (p.opener) 1 else -1;
 
@@ -239,8 +249,7 @@ fn handleCommand(cmd: lex.Command) void {
     }
 
     if (bracketDepth != 0) {
-        std.log.err("unbalanced brackets when processing: {s}\n", .{cmd.text});
-        std.process.exit(1);
+        failFmt("unbalanced brackets when processing: {s}\n", .{cmd.text});
     }
     indent -= 1;
 
@@ -248,8 +257,7 @@ fn handleCommand(cmd: lex.Command) void {
         indent += 1;
     } else if (isControlStructureEnd(cmd.text)) {
         if (indent == 0) {
-            std.log.err("unbalanced control structure when processing: {s}\n", .{cmd.text});
-            std.process.exit(1);
+            failFmt("unbalanced control structure when processing: {s}\n", .{cmd.text});
         }
         indent -= 1;
     }
@@ -292,10 +300,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
                     numArgsForMultiArg += 1;
                 }
             },
-            .Cmd => {
-                std.log.err("Command in unexpected place, this is a bug", .{});
-                std.process.exit(1);
-            },
+            .Cmd => |c| failFmt("command in unexpected place '{s}', this is a bug", .{c.text}),
             else => continue,
         }
     }
@@ -473,10 +478,7 @@ pub fn format(tokens: std.ArrayList(lex.Token), inFileSize: usize, options: Opti
     useCRLF = sourceHasCRLF;
 
     // Write formatted text to a buffer
-    var formattedText = std.ArrayList(u8).initCapacity(tokens.allocator, inFileSize + (inFileSize / 2)) catch |err| {
-        std.log.err("Failed to allocate buffer. Error: {s}\n", .{@errorName(err)});
-        std.process.exit(1);
-    };
+    var formattedText = std.ArrayList(u8).initCapacity(tokens.allocator, inFileSize + (inFileSize / 2)) catch |e| fail("Failed to allocate buffer", e);
     defer formattedText.deinit();
     gOutBuffer = &formattedText;
 
@@ -486,8 +488,7 @@ pub fn format(tokens: std.ArrayList(lex.Token), inFileSize: usize, options: Opti
         switch (token) {
             .Cmd => |c| handleCommand(c),
             .UnquotedArg, .QuotedArg, .BracketedArg, .Paren => {
-                std.log.err("Args/Parens should already be handled in handleCommand, this is a bug\n", .{});
-                std.debug.assert(false);
+                fail("Args/Parens should already be handled in handleCommand, this is a bug", error.UnexpectedArg);
             },
             .Comment => |c| handleComment(c),
             .Newline => |_| handleNewline(),
@@ -498,18 +499,10 @@ pub fn format(tokens: std.ArrayList(lex.Token), inFileSize: usize, options: Opti
 
     if (!options.inplace) {
         // Write out to stdout
-        _ = std.io.getStdOut().writeAll(formattedText.items) catch |e| {
-            std.log.err("Failed to write. Error: {s}\n", .{@errorName(e)});
-        };
+        _ = std.io.getStdOut().writeAll(formattedText.items) catch |e| fail("Failed to write to stdout", e);
     } else {
         // Write to given file
-        const file = std.fs.cwd().createFile(options.filename, .{}) catch |e| {
-            std.log.err("Failed to open file for writing. Error: {s}\n", .{@errorName(e)});
-            std.process.exit(1);
-        };
-        _ = file.writeAll(formattedText.items) catch |e| {
-            std.log.err("Failed to write. Error: {s}\n", .{@errorName(e)});
-            std.process.exit(1);
-        };
+        const file = std.fs.cwd().createFile(options.filename, .{}) catch |e| fail("Failed to open file for writing", e);
+        _ = file.writeAll(formattedText.items) catch |e| fail("Failed to write to file", e);
     }
 }
