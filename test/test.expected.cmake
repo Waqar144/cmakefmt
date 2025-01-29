@@ -82,10 +82,11 @@ find_package(FOO
     CMAKE_FIND_ROOT_PATH_BOTH
 )
 # not great currently, but just hand format it a bit for clarity
-if(NOT(-1
-    EQUAL(${v})) AND(1
-    EQUAL
-    1)
+if(NOT (-1 EQUAL (${v})) AND (1 EQUAL 1))
+endif()
+
+if((AA AND BB) OR
+    (CC AND DD) OR (EE AND FF)
 )
 endif()
 

@@ -111,6 +111,48 @@ fn countArgsInLine(fromTokenIndex: u32) u32 {
     return numArgsInLine;
 }
 
+// compoundArg := ( arg+ )
+fn handleCompoundArg() void {
+    std.debug.assert(std.meta.activeTag(gtokens.items[currentTokenIndex.*]) == .Paren);
+    currentTokenIndex.* += 1;
+    var parenDepth: i32 = 1;
+
+    // This function atm is too simple
+    // it just keeps all the args on a single line
+
+    while (currentTokenIndex.* < gtokens.items.len) {
+        switch (gtokens.items[currentTokenIndex.*]) {
+            .Cmd => |c| std.debug.panic("Command in unexpected position {s}", .{c.text}),
+            .Paren => |p| {
+                parenDepth += if (p.opener) 1 else -1;
+
+                handleParen(p);
+
+                if (parenDepth == 0) {
+                    return;
+                } else if (p.opener) {
+                    handleCompoundArg();
+
+                    std.debug.assert(std.meta.activeTag(gtokens.items[currentTokenIndex.*]) == .Paren and
+                        gtokens.items[currentTokenIndex.*].Paren.opener == false);
+                    parenDepth -= 1;
+                }
+            },
+            .UnquotedArg, .QuotedArg, .BracketedArg => {
+                const a = gtokens.items[currentTokenIndex.*];
+                write(a.text());
+
+                if (!isNextTokenParenClose()) {
+                    write(" ");
+                }
+            },
+            .Comment => |c| handleComment(c),
+            .Newline => |_| {},
+        }
+        currentTokenIndex.* += 1;
+    }
+}
+
 fn handleCommand(cmd: lex.Command) void {
     write(cmd.text);
 
@@ -144,6 +186,12 @@ fn handleCommand(cmd: lex.Command) void {
 
                 if (bracketDepth == 0) {
                     break;
+                } else if (bracketDepth > 1 and p.opener) {
+                    handleCompoundArg();
+
+                    std.debug.assert(std.meta.activeTag(gtokens.items[currentTokenIndex.*]) == .Paren and
+                        gtokens.items[currentTokenIndex.*].Paren.opener == false);
+                    bracketDepth -= 1;
                 }
             },
             .UnquotedArg, .QuotedArg, .BracketedArg => blk: {
@@ -168,7 +216,7 @@ fn handleCommand(cmd: lex.Command) void {
                     handleNewline();
                     newlines += 1;
                     argTextLen = 0;
-                } else if (!isNextTokenNewline() and !isNextTokenParen()) {
+                } else if (!isNextTokenNewline() and !isNextTokenParenClose()) {
                     write(" ");
                 }
             },

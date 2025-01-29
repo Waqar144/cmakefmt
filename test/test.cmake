@@ -27,6 +27,12 @@ find_package(FOO 1.23 EXACT QUIET REQUIRED foo bar OPTIONAL_COMPONENTS foo bar C
 if(NOT(-1 EQUAL (${v}))AND(1 EQUAL 1))
 endif()
 
+if ((AA AND BB) OR
+(CC
+AND
+DD) OR (EE AND FF  ))
+endif()
+
 set(SOME_FORMATTED_PYTHON_CODE [=[
 def foo(bar, baz):
     for i, j in zip(bar, baz):
