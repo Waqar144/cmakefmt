@@ -52,11 +52,11 @@ fn generate(allocator: mem.Allocator, dirPath: []const u8, skipPrivateFns: bool)
             continue;
 
         const file = d.dir.openFile(d.basename, .{}) catch |err| {
-            std.log.err("Failed to read file: {s}", .{@errorName(err)});
+            std.log.err("Failed to read file '{s}': {s}", .{ d.basename, @errorName(err) });
             continue;
         };
         const data = file.reader().readAllAlloc(allocator, std.math.maxInt(i32)) catch |err| {
-            std.log.err("Failed to read file: {s}", .{@errorName(err)});
+            std.log.err("Failed to read file '{s}': {s}", .{ d.basename, @errorName(err) });
             continue;
         };
 

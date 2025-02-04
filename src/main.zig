@@ -36,7 +36,7 @@ pub fn main() !void {
 
             const reader = file.reader();
             const data = reader.readAllAlloc(arena.allocator(), std.math.maxInt(i32)) catch |err| {
-                std.log.err("Failed to read file: {s}", .{@errorName(err)});
+                std.log.err("Failed to read file '{s}': {s}", .{ options.filename, @errorName(err) });
                 std.process.exit(1);
                 return;
             };
