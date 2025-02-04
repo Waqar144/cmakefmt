@@ -59,6 +59,7 @@ pub const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_s
     .{ "set_target_properties", .{ .multi = &.{"PROPERTIES"}, .options = emptyArgs, .one = emptyArgs } },
     .{ "set_directory_properties", .{ .multi = &.{"PROPERTIES"}, .options = emptyArgs, .one = emptyArgs } },
     .{ "set_tests_properties", .{ .multi = &.{"PROPERTIES"}, .one = &.{"DIRECTORY"}, .options = emptyArgs } },
+    .{ "set_package_properties", .{ .multi = &.{"PROPERTIES"}, .one = emptyArgs, .options = emptyArgs } },
     .{ "set_source_files_properties", .{ .multi = &.{ "PROPERTIES", "DIRECTORY", "TARGET_DIRECTORY" }, .options = emptyArgs, .one = emptyArgs } },
     .{ "add_custom_target", .{
         .multi = &.{ "COMMAND", "DEPENDS", "BYPRODUCTS", "SOURCES" },
