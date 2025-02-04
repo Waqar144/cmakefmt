@@ -1,7 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
 const lexer = @import("lexer.zig");
-const util = @import("u8_utils.zig");
 
 const ParseArgKind = enum {
     PARSE_ARGV,
@@ -79,7 +78,8 @@ fn generate(allocator: mem.Allocator, dirPath: []const u8, skipPrivateFns: bool)
         while (i < tokens.items.len) : (i += 1) {
             switch (tokens.items[i]) {
                 .Cmd => |c| {
-                    if (mem.eql(u8, "function", c.text)) {
+                    if (mem.eql(u8, "function", c.text) or mem.eql(u8, "macro", c.text)) {
+                        const isFunction = mem.eql(u8, "function", c.text);
                         infunction = true;
                         var j = i + 1;
                         while (j < tokens.items.len) : (j += 1) {
@@ -102,7 +102,7 @@ fn generate(allocator: mem.Allocator, dirPath: []const u8, skipPrivateFns: bool)
                         }
 
                         i = j;
-                        const keywordData = try parseFunction(allocator, tokens, &j);
+                        const keywordData = try parseFunction(allocator, tokens, &i, isFunction);
                         try functionArgData.put(functionName, keywordData);
 
                         count += 1;
@@ -116,7 +116,7 @@ fn generate(allocator: mem.Allocator, dirPath: []const u8, skipPrivateFns: bool)
     }
 }
 
-pub fn parseFunction(allocator: mem.Allocator, tokens: std.ArrayList(lexer.Token), i: *u32) !KeywordData {
+pub fn parseFunction(allocator: mem.Allocator, tokens: std.ArrayList(lexer.Token), i: *u32, isFunction: bool) !KeywordData {
     var j = i.*;
     var variables = std.ArrayList(Variable).init(allocator);
     var keywordData: KeywordData = .{
@@ -163,6 +163,12 @@ pub fn parseFunction(allocator: mem.Allocator, tokens: std.ArrayList(lexer.Token
                     keywordData = try resolveArguments(allocator, variables, options, oneValue, multiValue);
                     // we are done
                     break;
+                } else if (mem.eql(u8, c.text, "endfunction")) {
+                    if (isFunction)
+                        break;
+                } else if (mem.eql(u8, c.text, "endmacro")) {
+                    if (!isFunction)
+                        break;
                 }
             },
             else => continue,
