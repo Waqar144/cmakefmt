@@ -51,6 +51,10 @@ fn generate(allocator: mem.Allocator, dirPath: []const u8, skipPrivateFns: bool)
         if (d.kind != .file)
             continue;
 
+        if (!(mem.eql(u8, "CMakeLists.txt", d.basename) or mem.endsWith(u8, d.basename, ".cmake"))) {
+            continue;
+        }
+
         const file = d.dir.openFile(d.basename, .{}) catch |err| {
             std.log.err("Failed to read file '{s}': {s}", .{ d.basename, @errorName(err) });
             continue;
@@ -60,9 +64,6 @@ fn generate(allocator: mem.Allocator, dirPath: []const u8, skipPrivateFns: bool)
             continue;
         };
 
-        if (!(mem.eql(u8, "CMakeLists.txt", d.basename) or mem.endsWith(u8, d.basename, ".cmake"))) {
-            continue;
-        }
         //         std.log.info("Reading: {s}", .{d.basename});
 
         const tokens = lexer.lex(data, allocator) catch |err| {
