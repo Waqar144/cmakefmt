@@ -63,6 +63,7 @@ fn generate(allocator: mem.Allocator, dirPath: []const u8, skipPrivateFns: bool)
         if (!(mem.eql(u8, "CMakeLists.txt", d.basename) or mem.endsWith(u8, d.basename, ".cmake"))) {
             continue;
         }
+        //         std.log.info("Reading: {s}", .{d.basename});
 
         const tokens = lexer.lex(data, allocator) catch |err| {
             std.debug.print("Failed to parse: {s}, file: {s}\n", .{ @errorName(err), try d.dir.realpathAlloc(allocator, d.basename) });
@@ -274,8 +275,6 @@ pub fn dump(allocator: mem.Allocator, functionArgData: std.StringHashMap(Keyword
     var it = functionArgData.iterator();
     while (it.next()) |kv| {
         var value = kv.value_ptr.*;
-        if (value.options.items.len == 0 and value.multi.items.len == 0 and value.one.items.len == 0)
-            continue;
 
         // merge options from qt5 / qt6
         if (mem.startsWith(u8, kv.key_ptr.*, "qt_")) {
@@ -310,6 +309,9 @@ pub fn dump(allocator: mem.Allocator, functionArgData: std.StringHashMap(Keyword
 
             value = vv;
         }
+
+        if (value.options.items.len == 0 and value.multi.items.len == 0 and value.one.items.len == 0)
+            continue;
 
         std.debug.print(".{{ \"{s}\", .{{\n    ", .{try std.ascii.allocLowerString(allocator, kv.key_ptr.*)});
 
