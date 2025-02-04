@@ -14,8 +14,8 @@ pub fn printHelp() !void {
         \\    cmakefmt CMakeLists.txt
         \\
         \\Options:
-        \\ -i   Overwite the given file (inplace formatting)
-        \\ -h   Print this help text
+        \\ -i           Overwite the given file (inplace formatting)
+        \\ -h, --help   Print this help text
         \\
     );
 }
@@ -32,7 +32,7 @@ pub fn parseArgs(args: *std.process.ArgIterator) Options {
     while (args.next()) |arg| {
         if (mem.eql(u8, arg, "-i")) {
             options.inplace = true;
-        } else if (mem.eql(u8, arg, "-h")) {
+        } else if (mem.eql(u8, arg, "-h") or mem.eql(u8, arg, "--help")) {
             options.help = true;
         } else {
             options.filename = arg;
