@@ -1,17 +1,6 @@
 const std = @import("std");
 const lexer = @import("lexer.zig");
-
-//     const out = std.io.getStdOut().writer();
-//     for (tokens.items, 0..) |tok, idx| {
-//         std.debug.print("[{d}] --- ", .{idx});
-//         if (std.meta.activeTag(tok) == .Paren) {
-//             std.debug.print(".{{ .{s} = .{{ .opener = {s} }} }},\n", .{ @tagName(tok), if (tok.Paren.opener) "true" else "false" });
-//         } else if (std.meta.activeTag(tok) == .Newline) {
-//             std.debug.print(".{{ .{s} = .{{}} }},\n", .{@tagName(tok)});
-//         } else {
-//             std.debug.print(".{{ .{s} = .{{ .text = \"{s}\" }} }},\n", .{ @tagName(tok), tok.text() });
-//         }
-//     }
+const testing = std.testing;
 
 test "test full file" {
     const alloc = std.testing.allocator;
@@ -113,15 +102,13 @@ test "test full file" {
 }
 
 test "empty" {
-    const t = std.testing;
-    var tokens = try lexer.lex("", t.allocator);
+    var tokens = try lexer.lex("", testing.allocator);
     defer tokens.deinit();
-    try t.expect(tokens.items.len == 0);
+    try testing.expect(tokens.items.len == 0);
 }
 
 test "test multiple in command" {
-    const t = std.testing;
-    var tokens = try lexer.lex("cmake_minimum_required(VERSION 3.16 FATAL_ERROR)", t.allocator);
+    var tokens = try lexer.lex("cmake_minimum_required(VERSION 3.16 FATAL_ERROR)", testing.allocator);
     defer tokens.deinit();
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "cmake_minimum_required" } },
@@ -131,12 +118,11 @@ test "test multiple in command" {
         .{ .UnquotedArg = .{ .text = "FATAL_ERROR" } },
         .{ .Paren = .{ .opener = false } },
     };
-    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+    try testing.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
 
 test "test multiple parens in command" {
-    const t = std.testing;
-    var tokens = try lexer.lex("if((CMAKE_CXX_COMPILER_ID STREQUAL \"GNU\") AND (${CMAKE_SYSTEM_NAME} MATCHES \"Linux\"))", t.allocator);
+    var tokens = try lexer.lex("if((CMAKE_CXX_COMPILER_ID STREQUAL \"GNU\") AND (${CMAKE_SYSTEM_NAME} MATCHES \"Linux\"))", testing.allocator);
     defer tokens.deinit();
 
     const expectedTokens = [_]lexer.Token{
@@ -155,12 +141,11 @@ test "test multiple parens in command" {
         .{ .Paren = .{ .opener = false } },
         .{ .Paren = .{ .opener = false } },
     };
-    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+    try testing.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
 
 test "test escaped unquoted arg" {
-    const t = std.testing;
-    var tokens = try lexer.lex("set(VAR \\\"\\\")", t.allocator);
+    var tokens = try lexer.lex("set(VAR \\\"\\\")", testing.allocator);
     defer tokens.deinit();
     //     std.debug.print("{any}\n", .{tokens});
     const expectedTokens = [_]lexer.Token{
@@ -170,7 +155,7 @@ test "test escaped unquoted arg" {
         .{ .UnquotedArg = .{ .text = "\\\"\\\"" } },
         .{ .Paren = .{ .opener = false } },
     };
-    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+    try testing.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
 
 test "comment in args" {
@@ -181,7 +166,6 @@ test "comment in args" {
         \\)
     ;
 
-    const t = std.testing;
     var tokens = try lexer.lex(source, std.testing.allocator);
     defer tokens.deinit();
     const expectedTokens = [_]lexer.Token{
@@ -198,11 +182,10 @@ test "comment in args" {
         .{ .Newline = .{} },
         .{ .Paren = .{ .opener = false } },
     };
-    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+    try testing.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
 
 test "unquoted arg containing quotes" {
-    const t = std.testing;
     const source = "execute_process(COMMAND git log -1 --format=%cd --date=format:\"%Y-%m-%d %H:%M:%S\")";
     var tokens = try lexer.lex(source, std.testing.allocator);
     defer tokens.deinit();
@@ -217,11 +200,10 @@ test "unquoted arg containing quotes" {
         .{ .UnquotedArg = .{ .text = "--date=format:\"%Y-%m-%d %H:%M:%S\"" } },
         .{ .Paren = .{ .opener = false } },
     };
-    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+    try testing.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
 
 test "open paren after unquoted arg" {
-    const t = std.testing;
     const source = "if(NOT(-1 EQUAL (${v})))";
     var tokens = try lexer.lex(source, std.testing.allocator);
     defer tokens.deinit();
@@ -238,11 +220,10 @@ test "open paren after unquoted arg" {
         .{ .Paren = .{ .opener = false } },
         .{ .Paren = .{ .opener = false } },
     };
-    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+    try testing.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
 
 test "comment after unquoted arg" {
-    const t = std.testing;
     const source = "if(VAR#comment\n)";
     var tokens = try lexer.lex(source, std.testing.allocator);
     defer tokens.deinit();
@@ -254,11 +235,10 @@ test "comment after unquoted arg" {
         .{ .Newline = .{} },
         .{ .Paren = .{ .opener = false } },
     };
-    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+    try testing.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
 
 test "not bracketed comment" {
-    const t = std.testing;
     const source = "#[comment]\n#[=comment]";
     var tokens = try lexer.lex(source, std.testing.allocator);
     defer tokens.deinit();
@@ -267,7 +247,7 @@ test "not bracketed comment" {
         .{ .Newline = .{} },
         .{ .Comment = .{ .bracketed = false, .text = "#[=comment]" } },
     };
-    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+    try testing.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
 
 test "bad bracketed comment" {
@@ -276,7 +256,6 @@ test "bad bracketed comment" {
 }
 
 test "not bracketed arg" {
-    const t = std.testing;
     const source = "cmd([arg])";
     var tokens = try lexer.lex(source, std.testing.allocator);
     defer tokens.deinit();
@@ -286,11 +265,10 @@ test "not bracketed arg" {
         .{ .UnquotedArg = .{ .text = "[arg]" } },
         .{ .Paren = .{ .opener = false } },
     };
-    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+    try testing.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
 
 test "crlf" {
-    const t = std.testing;
     const source = "cmd([arg])\r\n";
     var tokens = try lexer.lex(source, std.testing.allocator);
     defer tokens.deinit();
@@ -299,7 +277,7 @@ test "crlf" {
         .{ .Paren = .{ .opener = true } },
         .{ .UnquotedArg = .{ .text = "[arg]" } },
         .{ .Paren = .{ .opener = false } },
-        .{ .Newline = .{ } },
+        .{ .Newline = .{} },
     };
-    try t.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
+    try testing.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
