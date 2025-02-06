@@ -274,20 +274,20 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
 
     var k = currentTokenIndex + 1;
     var bracketDepth = currentBracketDepth;
-    var numArgsForMultiArg: u32 = 0;
+    var numValuesForMultiArg: u32 = 0;
     while (k < gTokens.len) : (k += 1) {
         const arg = gTokens[k];
         switch (arg) {
             .UnquotedArg, .QuotedArg, .BracketedArg => {
                 if (commandKeywords.contains(arg.text()))
                     break;
-                numArgsForMultiArg += 1;
+                numValuesForMultiArg += 1;
                 if (isOneValueArg) {
                     if (k + 1 < gTokens.len) {
                         const next = gTokens[k + 1];
                         if (std.meta.activeTag(next) == .Comment) {
-                            numArgsForMultiArg += 1;
-                            if (next.Comment.bracketed) numArgsForMultiArg += 1;
+                            numValuesForMultiArg += 1;
+                            if (next.Comment.bracketed) numValuesForMultiArg += 1;
                         }
                     }
                     break;
@@ -299,10 +299,10 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
                     break;
             },
             .Comment => |c| {
-                numArgsForMultiArg += 1;
+                numValuesForMultiArg += 1;
                 if (c.bracketed) {
                     k += 1;
-                    numArgsForMultiArg += 1;
+                    numValuesForMultiArg += 1;
                 }
             },
             .Cmd => |c| failFmt("command in unexpected place '{s}', this is a bug", .{c.text}),
@@ -311,7 +311,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
     }
 
     // there are no values, return now and let the generic handler handle this arg
-    if (numArgsForMultiArg == 0) {
+    if (numValuesForMultiArg == 0) {
         return false;
     }
 
@@ -323,7 +323,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
 
     // separate args with newline if there are more than 3 args
     // TODO: probably account for text length here along with num args
-    var seperateWithNewline = (numArgsForMultiArg > 3) and !isOneValueArg;
+    var seperateWithNewline = (numValuesForMultiArg > 3) and !isOneValueArg;
 
     if (seperateWithNewline) {
         newlinesInserted.* = true;
@@ -341,11 +341,11 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
 
     var isKey = true;
     var processed: u32 = 0;
-    while (processed < numArgsForMultiArg) : (j += 1) {
+    while (processed < numValuesForMultiArg) : (j += 1) {
         const arg = gTokens[j];
         switch (arg) {
             .UnquotedArg, .QuotedArg, .BracketedArg => {
-                const isLast = processed + 1 == numArgsForMultiArg;
+                const isLast = processed + 1 == numValuesForMultiArg;
                 write(arg.text());
 
                 if (isPROPERTIES) {
@@ -376,7 +376,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
                     write(c.text);
                     j += 1;
                     processed += 1;
-                    const isLast = processed == numArgsForMultiArg;
+                    const isLast = processed == numValuesForMultiArg;
                     std.debug.assert(std.meta.activeTag(gTokens[j]) == .BracketedArg);
                     write(gTokens[j].text());
                     if (!isLast and seperateWithNewline) {
@@ -387,7 +387,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
                         write(" ");
                     }
                 } else {
-                    const isLast = processed == numArgsForMultiArg;
+                    const isLast = processed == numValuesForMultiArg;
                     write(c.text);
                     if (!isLast) {
                         writeln();
