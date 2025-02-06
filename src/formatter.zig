@@ -179,6 +179,8 @@ fn handleCommand(cmd: lex.Command) void {
     var numArgsInLine: u32 = countArgsInLine(currentTokenIndex + 1);
     var argTextLen: usize = 0;
 
+    const preferArgsOnSameline = strequal(cmd.text, "if");
+
     while (currentTokenIndex < gTokens.len) {
         switch (gTokens[currentTokenIndex]) {
             .Cmd => |c| failFmt("command in unexpected place, probably a bug: {s} {s}", .{ cmd.text, c.text }),
@@ -222,7 +224,10 @@ fn handleCommand(cmd: lex.Command) void {
                 const nextArgLen = if (currentTokenIndex + 1 < gTokens.len and !isNextTokenNewline()) peekNext().?.text().len else 0;
 
                 // if there are > 5 args on a line, then split them with newlines
-                if ((argTextLen + nextArgLen + (indent * indentWidth) > 120 or numArgsInLine > 5) and !isNextTokenNewline() and !isNextTokenParen()) {
+                if ((argTextLen + nextArgLen + (indent * indentWidth) > 120 or // always break if > 120
+                    (!preferArgsOnSameline and numArgsInLine > 5)) // break if args > 5 and this command doesnt prefer args on same line
+                and !isNextTokenNewline() and !isNextTokenParen()) // dont break if next token is newline or a parent
+                {
                     handleNewline();
                     newlines += 1;
                     argTextLen = 0;
