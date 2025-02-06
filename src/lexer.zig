@@ -198,37 +198,33 @@ fn readUnquotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u
     var j = i;
     var inQuotes: bool = false;
 
-    while (j < source.len) {
+    while (j < source.len) : (j += 1) {
         switch (source[j]) {
             '"' => {
                 inQuotes = !inQuotes;
-                j += 1;
             },
             '\\' => {
                 if (isEscapeSequence(source, j)) {
-                    j += 2;
-                    continue;
+                    j += 1;
+                } else {
+                    return error.InvalidEscapeSequence;
                 }
-                return error.InvalidEscapeSequence;
             },
             '(', '#', ')', ' ', '\t', '\n' => {
                 // unquoted_legacy, horizontal whitespace allowed in quotes
                 if (inQuotes and (source[j] == ' ' or source[j] == '\t')) {
-                    j += 1;
                     continue;
                 }
 
                 try tokens.*.append(Token{ .UnquotedArg = .{ .text = source[i..j] } });
                 if (isNewline(source, j)) {
-                    j = try readNewline(source, tokens, j);
+                    return try readNewline(source, tokens, j);
                 } else if (source[j] != '(' and source[j] != ')' and source[j] != '#') {
-                    j += 1;
+                    return j + 1;
                 }
                 break;
             },
-            else => {
-                j += 1;
-            },
+            else => {},
         }
     }
 
