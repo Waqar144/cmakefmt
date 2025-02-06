@@ -33,6 +33,7 @@ pub fn main() !void {
                 std.process.exit(1);
                 return;
             };
+            defer file.close();
 
             const reader = file.reader();
             const data = reader.readAllAlloc(arena.allocator(), std.math.maxInt(i32)) catch |err| {
