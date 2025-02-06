@@ -90,6 +90,11 @@ pub const gCommandMap = std.StaticStringMapWithEql(CommandKeywords, std.static_s
     .{ "get_filename_component", .{ .one = &.{ "BASE_DIR", "PROGRAM_ARGS" }, .options = emptyArgs, .multi = emptyArgs } },
     .{ "include", .{ .one = &.{"RESULT_VARIABLE"}, .options = emptyArgs, .multi = emptyArgs } },
     .{ "project", .{ .one = &.{ "VERSION", "DESCRIPTION", "HOMEPAGE_URL" }, .options = emptyArgs, .multi = &.{"LANGUAGES"} } },
+    .{ "install", .{
+        .one = &.{ "DESTINATION", "COMPONENT", "NAMELINK_COMPONENT", "TYPE", "RENAME", "SCRIPT", "CODE", "EXPORT", "NAMESPACE", "FILE", "EXPORT_ANDROID_MK", "RUNTIME_DEPENDENCY_SET", "COMPAT_VERSION", "VERSION_SCHEMA", "PACKAGE_INFO", "APPENDIX" },
+        .options = &.{ "OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP", "USE_SOURCE_PERMISSIONS", "MESSAGE_NEVER", "FILES_MATCHING", "ALL_COMPONENTS", "EXPORT_LINK_INTERFACE_LIBRARIES", "EXPORT_PACKAGE_DEPENDENCIES", "LIBRARY", "RUNTIME", "FRAMEWORK", "LOWER_CASE_FILE" },
+        .multi = &.{ "PERMISSIONS", "CONFIGURATIONS", "FILES", "PROGRAMS", "DIRECTORY", "FILE_PERMISSIONS", "DIRECTORY_PERMISSIONS", "IMPORTED_RUNTIME_ARTIFACTS", "PRE_INCLUDE_REGEXES", "PRE_EXCLUDE_REGEXES", "POST_INCLUDE_REGEXES", "POST_EXCLUDE_REGEXES", "POST_INCLUDE_FILES", "POST_EXCLUDE_FILES", "DIRECTORIES", "VERSION", "DEFAULT_TARGETS", "DEFAULT_CONFIGURATIONS" },
+    } },
 
     // BEGIN builtin Modules
     .{ "find_package_check_version", .{ .options = &.{ "HANDLE_VERSION_RANGE", "NO_AUTHOR_WARNING_VERSION_RANGE" }, .one = &.{"RESULT_MESSAGE_VARIABLE"}, .multi = emptyArgs } },
