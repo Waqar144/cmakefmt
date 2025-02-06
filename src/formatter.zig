@@ -275,12 +275,14 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
     var k = currentTokenIndex + 1;
     var bracketDepth = currentBracketDepth;
     var numValuesForMultiArg: u32 = 0;
+    var textLen: usize = 0;
     while (k < gTokens.len) : (k += 1) {
         const arg = gTokens[k];
         switch (arg) {
             .UnquotedArg, .QuotedArg, .BracketedArg => {
                 if (commandKeywords.contains(arg.text()))
                     break;
+                textLen += arg.text().len;
                 numValuesForMultiArg += 1;
                 if (isOneValueArg) {
                     if (k + 1 < gTokens.len) {
@@ -323,7 +325,7 @@ fn handleMultiArgs(commandKeywords: builtin_commands.CommandKeywords, argOnSameL
 
     // separate args with newline if there are more than 3 args
     // TODO: probably account for text length here along with num args
-    var seperateWithNewline = (numValuesForMultiArg > 3) and !isOneValueArg;
+    var seperateWithNewline = (numValuesForMultiArg > 3 or textLen > 120) and !isOneValueArg;
 
     if (seperateWithNewline) {
         newlinesInserted.* = true;

@@ -271,3 +271,11 @@ if(UNIX AND NOT APPLE AND NOT ANDROID
 )
     set(MY_VAR ON)
 endif()
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/LongLongFileAbc.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/VERYVERY_LOng_file_name.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Hello_world_WOlrd_worl_world.cmake"
+    DESTINATION "${CMAKECONFIG_INSTALL_DIR}"
+    COMPONENT ShotComponent
+)
