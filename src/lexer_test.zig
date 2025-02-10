@@ -286,3 +286,8 @@ test "bad quoted arg" {
     const source = "hello(\"asd)";
     try std.testing.expectError(error.UnbalancedQuotes, lexer.lex(source, std.testing.allocator));
 }
+
+test "invalid cmake 1" {
+    const source = "hello(\"asd\"))";
+    try std.testing.expectError(error.ParseError, lexer.lex(source, std.testing.allocator));
+}

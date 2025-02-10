@@ -330,11 +330,13 @@ pub fn lex(source: []const u8, allocator: mem.Allocator) !std.ArrayList(Token) {
             i = try readNewline(source, &tokens, i);
         } else if (source[i] == '#') {
             i = try readComment(source, &tokens, i);
-        } else if (std.ascii.isAlphabetic(source[i]) or source[i] == '_') {
-            i = try parseCommand(source, &tokens, i);
         } else {
-            std.debug.print("Unhandled char '{c}', {d}\n", .{ source[i], source[i] });
-            return error.ParseError;
+            if (std.ascii.isAlphabetic(source[i]) or source[i] == '_') {
+                i = try parseCommand(source, &tokens, i);
+            } else {
+                std.debug.print("Expected a command, got '{c}', {d}\n", .{ source[i], source[i] });
+                return error.ParseError;
+            }
         }
     }
 
