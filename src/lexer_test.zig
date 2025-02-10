@@ -281,3 +281,8 @@ test "crlf" {
     };
     try testing.expectEqualDeep(expectedTokens[0..], tokens.items[0..]);
 }
+
+test "bad quoted arg" {
+    const source = "hello(\"asd)";
+    try std.testing.expectError(error.UnbalancedQuotes, lexer.lex(source, std.testing.allocator));
+}

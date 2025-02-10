@@ -167,11 +167,11 @@ fn readBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !
 fn readQuotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 {
     std.debug.assert(source[i] == '"');
     var j = i + 1;
-    while (j < source.len) {
+    while (j < source.len) : (j += 1) {
         switch (source[j]) {
             '\\' => { // process escape
                 if (isEscapeSequence(source, j)) {
-                    j += 2;
+                    j += 1;
                     continue;
                 }
                 return error.InvalidEscapeSequence;
@@ -180,14 +180,12 @@ fn readQuotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32
                 // end
                 j += 1;
                 try tokens.*.append(Token{ .QuotedArg = .{ .text = source[i..j] } });
-                break;
+                return j;
             },
-            else => {
-                j += 1;
-            },
+            else => {},
         }
     }
-    return j;
+    return error.UnbalancedQuotes;
 }
 
 // unquoted_argument ::=  unquoted_element+ | unquoted_legacy
