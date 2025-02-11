@@ -60,15 +60,21 @@ fn generate(allocator: mem.Allocator, dirPath: []const u8, skipPrivateFns: bool)
             continue;
         };
         defer file.close();
-        const data = file.reader().readAllAlloc(allocator, std.math.maxInt(i32)) catch |err| {
+
+        // Try to use a 700 KB buffer to allocate from
+        var fallback = std.heap.stackFallback(700 * 1024, allocator);
+        const tempAllocator = fallback.get();
+
+        const data = file.reader().readAllAlloc(tempAllocator, std.math.maxInt(i32)) catch |err| {
             std.log.err("Failed to read file '{s}': {s}", .{ d.basename, @errorName(err) });
             continue;
         };
 
         //         std.log.info("Reading: {s}", .{d.basename});
 
-        const tokens = lexer.lex(data, allocator) catch |err| {
-            std.debug.print("Failed to parse: {s}, file: {s}\n", .{ @errorName(err), try d.dir.realpathAlloc(allocator, d.basename) });
+        var errorPosition: ?lexer.Position = null;
+        const tokens = lexer.lex(data, tempAllocator, &errorPosition) catch |err| {
+            std.debug.print("Failed to parse: {s}, file: {s}\n", .{ @errorName(err), try d.dir.realpathAlloc(tempAllocator, d.basename) });
             continue;
         };
         var i: u32 = 0;
@@ -76,7 +82,7 @@ fn generate(allocator: mem.Allocator, dirPath: []const u8, skipPrivateFns: bool)
         var infunction: bool = false;
         var functionName: []const u8 = "";
 
-        var functionArgData = std.StringHashMap(KeywordData).init(allocator);
+        var functionArgData = std.StringHashMap(KeywordData).init(tempAllocator);
 
         while (i < tokens.items.len) : (i += 1) {
             switch (tokens.items[i]) {
@@ -105,7 +111,7 @@ fn generate(allocator: mem.Allocator, dirPath: []const u8, skipPrivateFns: bool)
                         }
 
                         i = j;
-                        const keywordData = try parseFunction(allocator, tokens, &i, isFunction);
+                        const keywordData = try parseFunction(tempAllocator, tokens, &i, isFunction);
                         try functionArgData.put(functionName, keywordData);
 
                         count += 1;
@@ -115,7 +121,7 @@ fn generate(allocator: mem.Allocator, dirPath: []const u8, skipPrivateFns: bool)
             }
         }
 
-        try dump(allocator, functionArgData);
+        try dump(tempAllocator, functionArgData);
     }
 }
 
