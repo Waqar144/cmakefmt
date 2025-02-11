@@ -9,6 +9,19 @@ pub const BracketedArg = struct { text: []const u8 };
 pub const Comment = struct { bracketed: bool, text: []const u8 };
 pub const Newline = struct {};
 
+pub const Position = struct {
+    line: u32,
+    col: u32,
+};
+
+pub const ParseError = error{
+    ExpectedAnotherBracket,
+    UnmatchedBrackets,
+    InvalidEscapeSequence,
+    UnbalancedQuotes,
+    InvalidSyntax,
+};
+
 pub const Token = union(enum) {
     Cmd: Command,
     Paren: Paren,
@@ -91,9 +104,9 @@ fn readNewline(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 {
     return j;
 }
 
-fn tryReadBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u32) !bool {
-    i.* = readBracketedArg(source, tokens, i.*) catch |err| {
-        if (err == error.ExpectedAnotherBracket) {
+fn tryReadBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u32, errorOffset: *u32) !bool {
+    i.* = readBracketedArg(source, tokens, i.*, errorOffset) catch |err| {
+        if (err == ParseError.ExpectedAnotherBracket) {
             return false;
         } else {
             return err;
@@ -106,7 +119,7 @@ fn tryReadBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: *u3
 // bracket_comment ::=  '#' bracket_argument
 // line_comment ::=  '#' <any text not starting in a bracket_open
 //                        and not containing a newline>
-fn readComment(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 {
+fn readComment(source: []const u8, tokens: *std.ArrayList(Token), i: u32, errorOffset: *u32) !u32 {
     // bracketed comment
     var j = i;
     if (j + 1 < source.len and source[j + 1] == '[') {
@@ -114,7 +127,7 @@ fn readComment(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 {
         try tokens.append(Token{ .Comment = .{ .bracketed = true, .text = source[j .. j + 1] } });
         // check if this is really a bracket_comment
         var k = j + 1;
-        if (try tryReadBracketedArg(source, tokens, &k)) {
+        if (try tryReadBracketedArg(source, tokens, &k, errorOffset)) {
             return k;
         } else {
             // pop off the '#'
@@ -134,7 +147,7 @@ fn readComment(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 {
 // bracket_content  ::=  <any text not containing a bracket_close with
 //                        the same number of '=' as the bracket_open>
 // bracket_close    ::=  ']' '='* ']'
-fn readBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 {
+fn readBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32, errorOffset: *u32) !u32 {
     std.debug.assert(source[i] == '[');
 
     var j = i + 1;
@@ -142,7 +155,7 @@ fn readBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !
     j += numEquals;
 
     // expect another [
-    if (source[j] != '[') return error.ExpectedAnotherBracket;
+    if (source[j] != '[') return ParseError.ExpectedAnotherBracket;
 
     while (j < source.len) : (j += 1) {
         if (source[j] == ']') {
@@ -155,8 +168,9 @@ fn readBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !
             }
         }
     }
+    errorOffset.* = j;
     std.debug.print("Unmatched brackets [[ ]]\n", .{});
-    return error.UnmatchedBrackets;
+    return ParseError.UnmatchedBrackets;
 }
 
 // quoted_argument     ::=  '"' quoted_element* '"'
@@ -164,7 +178,7 @@ fn readBracketedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !
 //                          escape_sequence |
 //                          quoted_continuation
 // quoted_continuation ::=  '\' newline
-fn readQuotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 {
+fn readQuotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32, errorOffset: *u32) !u32 {
     std.debug.assert(source[i] == '"');
     var j = i + 1;
     while (j < source.len) : (j += 1) {
@@ -174,7 +188,7 @@ fn readQuotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32
                     j += 1;
                     continue;
                 }
-                return error.InvalidEscapeSequence;
+                return ParseError.InvalidEscapeSequence;
             },
             '"' => {
                 // end
@@ -185,14 +199,15 @@ fn readQuotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32
             else => {},
         }
     }
-    return error.UnbalancedQuotes;
+    errorOffset.* = j;
+    return ParseError.UnbalancedQuotes;
 }
 
 // unquoted_argument ::=  unquoted_element+ | unquoted_legacy
 // unquoted_element  ::=  <any character except whitespace or one of '()#"\'> |
 //                        escape_sequence
 // unquoted_legacy   ::=  <see note in text> // can contain quotes
-fn readUnquotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 {
+fn readUnquotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32, errorOffset: *u32) !u32 {
     var j = i;
     var inQuotes: bool = false;
 
@@ -205,7 +220,7 @@ fn readUnquotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u
                 if (isEscapeSequence(source, j)) {
                     j += 1;
                 } else {
-                    return error.InvalidEscapeSequence;
+                    return ParseError.InvalidEscapeSequence;
                 }
             },
             '(', '#', ')', ' ', '\t', '\n' => {
@@ -227,7 +242,8 @@ fn readUnquotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u
     }
 
     if (inQuotes) {
-        return error.UnbalancedQuotes;
+        errorOffset.* = j;
+        return ParseError.UnbalancedQuotes;
     }
 
     return j;
@@ -237,7 +253,7 @@ fn readUnquotedArg(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u
 // separated_arguments ::=  separation+ argument? |
 //                          separation* '(' arguments ')'
 // separation          ::=  space | line_ending
-fn parseArgs(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 {
+fn parseArgs(source: []const u8, tokens: *std.ArrayList(Token), i: u32, errorOffset: *u32) !u32 {
     var j = try consumeWhitespace(source, tokens, i);
 
     var parenDepth: u32 = 0;
@@ -265,19 +281,19 @@ fn parseArgs(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 {
         }
         // read quoted arg
         else if (source[j] == '\"') {
-            j = try readQuotedArg(source, tokens, j);
+            j = try readQuotedArg(source, tokens, j, errorOffset);
         }
         // read bracketed arg
-        else if (source[j] == '[' and try tryReadBracketedArg(source, tokens, &j)) {
+        else if (source[j] == '[' and try tryReadBracketedArg(source, tokens, &j, errorOffset)) {
             //
         }
         // a comment
         else if (source[j] == '#') {
-            j = try readComment(source, tokens, j);
+            j = try readComment(source, tokens, j, errorOffset);
         }
         // read unquoted arg
         else {
-            j = try readUnquotedArg(source, tokens, j);
+            j = try readUnquotedArg(source, tokens, j, errorOffset);
         }
     }
     return j;
@@ -285,7 +301,7 @@ fn parseArgs(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 {
 
 // command_invocation  ::=  space* identifier space* '(' arguments ')'
 // identifier          ::=  <match '[A-Za-z_][A-Za-z0-9_]*'>
-fn parseCommand(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 {
+fn parseCommand(source: []const u8, tokens: *std.ArrayList(Token), i: u32, errorOffset: *u32) !u32 {
     var j = i + 1;
     while (j < source.len) {
         if (std.ascii.isAlphanumeric(source[j]) or source[j] == '_') {
@@ -301,16 +317,17 @@ fn parseCommand(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 
 
     if (source[j] != '(') {
         std.debug.print("Expected a '(' after command: {s}\n", .{tokens.getLast().Cmd.text});
-        return error.ParseError;
+        return ParseError.InvalidSyntax;
     }
     try tokens.append(Token{ .Paren = .{ .opener = true } });
     j += 1;
 
-    j = try parseArgs(source, tokens, j);
+    j = try parseArgs(source, tokens, j, errorOffset);
 
     if (source[j] != ')') {
+        errorOffset.* = j;
         std.debug.print("Expected a ')' after command\n", .{});
-        return error.ParseError;
+        return ParseError.InvalidSyntax;
     }
 
     try tokens.append(Token{ .Paren = .{ .opener = false } });
@@ -318,7 +335,7 @@ fn parseCommand(source: []const u8, tokens: *std.ArrayList(Token), i: u32) !u32 
     return j;
 }
 
-pub fn lex(source: []const u8, allocator: mem.Allocator) !std.ArrayList(Token) {
+fn lexImpl(source: []const u8, allocator: mem.Allocator, errorOffset: *u32) !std.ArrayList(Token) {
     var i: u32 = 0;
     var tokens = std.ArrayList(Token).init(allocator);
     errdefer tokens.deinit();
@@ -329,13 +346,18 @@ pub fn lex(source: []const u8, allocator: mem.Allocator) !std.ArrayList(Token) {
         } else if (isNewline(source, i)) {
             i = try readNewline(source, &tokens, i);
         } else if (source[i] == '#') {
-            i = try readComment(source, &tokens, i);
+            i = try readComment(source, &tokens, i, errorOffset);
         } else {
             if (std.ascii.isAlphabetic(source[i]) or source[i] == '_') {
-                i = try parseCommand(source, &tokens, i);
+                i = try parseCommand(source, &tokens, i, errorOffset);
             } else {
-                std.debug.print("Expected a command, got '{c}', {d}\n", .{ source[i], source[i] });
-                return error.ParseError;
+                if (std.ascii.isPrint(source[i])) {
+                    std.debug.print("Expected a command, got '{c}':\n", .{source[i]});
+                } else {
+                    std.debug.print("Expected a command, got ({d}):\n", .{source[i]});
+                }
+                errorOffset.* = i;
+                return ParseError.InvalidSyntax;
             }
         }
     }
@@ -350,6 +372,47 @@ pub fn lex(source: []const u8, allocator: mem.Allocator) !std.ArrayList(Token) {
     }
 
     return tokens;
+}
+
+fn isParseError(err: anyerror) bool {
+    return switch (err) {
+        ParseError.ExpectedAnotherBracket, ParseError.UnmatchedBrackets, ParseError.InvalidEscapeSequence, ParseError.UnbalancedQuotes, ParseError.InvalidSyntax => true,
+        else => false,
+    };
+}
+
+pub fn lex(source: []const u8, allocator: mem.Allocator, errorPosition: *?Position) !std.ArrayList(Token) {
+    var errorOffset: u32 = 1;
+    return lexImpl(source, allocator, &errorOffset) catch |err| {
+        if (isParseError(err)) {
+            var pos: usize = 0;
+            var line: u32 = 0;
+            var nextLineStart: usize = 0;
+
+            while (true) {
+                const nextNewline = std.mem.indexOfScalarPos(u8, source, pos, '\n');
+                if (nextNewline == null or nextNewline.? > errorOffset) {
+                    nextLineStart = if (nextNewline == null) source.len else nextNewline.?;
+                    break;
+                }
+                pos = nextNewline.? + 1;
+                line += 1;
+            }
+            const column: u32 = @intCast(errorOffset - pos);
+            const lineText = source[pos..nextLineStart];
+            std.debug.print("{s}\n", .{lineText});
+            for (0..column) |_| {
+                std.debug.print(" ", .{});
+            }
+            std.debug.print("^\n", .{});
+
+            errorPosition.* = .{
+                .line = line + 1,
+                .col = column + 1,
+            };
+        }
+        return err;
+    };
 }
 
 test {

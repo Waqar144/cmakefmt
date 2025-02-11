@@ -9,7 +9,10 @@ test "test full file" {
         return;
     };
     defer alloc.free(text);
-    var tokens = try lexer.lex(text, alloc);
+    var errorPosition: ?lexer.Position = null;
+    var tokens = try lexer.lex(text, alloc, &errorPosition);
+    try testing.expect(errorPosition == null);
+
     defer tokens.deinit();
 
     const expectedTokens = [_]lexer.Token{
@@ -102,13 +105,17 @@ test "test full file" {
 }
 
 test "empty" {
-    var tokens = try lexer.lex("", testing.allocator);
+    var errorPosition: ?lexer.Position = null;
+    var tokens = try lexer.lex("", testing.allocator, &errorPosition);
+    try testing.expect(errorPosition == null);
     defer tokens.deinit();
     try testing.expect(tokens.items.len == 0);
 }
 
 test "test multiple in command" {
-    var tokens = try lexer.lex("cmake_minimum_required(VERSION 3.16 FATAL_ERROR)", testing.allocator);
+    var errorPosition: ?lexer.Position = null;
+    var tokens = try lexer.lex("cmake_minimum_required(VERSION 3.16 FATAL_ERROR)", testing.allocator, &errorPosition);
+    try testing.expect(errorPosition == null);
     defer tokens.deinit();
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "cmake_minimum_required" } },
@@ -122,7 +129,9 @@ test "test multiple in command" {
 }
 
 test "test multiple parens in command" {
-    var tokens = try lexer.lex("if((CMAKE_CXX_COMPILER_ID STREQUAL \"GNU\") AND (${CMAKE_SYSTEM_NAME} MATCHES \"Linux\"))", testing.allocator);
+    var errorPosition: ?lexer.Position = null;
+    var tokens = try lexer.lex("if((CMAKE_CXX_COMPILER_ID STREQUAL \"GNU\") AND (${CMAKE_SYSTEM_NAME} MATCHES \"Linux\"))", testing.allocator, &errorPosition);
+    try testing.expect(errorPosition == null);
     defer tokens.deinit();
 
     const expectedTokens = [_]lexer.Token{
@@ -145,7 +154,9 @@ test "test multiple parens in command" {
 }
 
 test "test escaped unquoted arg" {
-    var tokens = try lexer.lex("set(VAR \\\"\\\")", testing.allocator);
+    var errorPosition: ?lexer.Position = null;
+    var tokens = try lexer.lex("set(VAR \\\"\\\")", testing.allocator, &errorPosition);
+    try testing.expect(errorPosition == null);
     defer tokens.deinit();
     //     std.debug.print("{any}\n", .{tokens});
     const expectedTokens = [_]lexer.Token{
@@ -165,8 +176,9 @@ test "comment in args" {
         \\   AND VARC # Some comment
         \\)
     ;
-
-    var tokens = try lexer.lex(source, std.testing.allocator);
+    var errorPosition: ?lexer.Position = null;
+    var tokens = try lexer.lex(source, std.testing.allocator, &errorPosition);
+    try testing.expect(errorPosition == null);
     defer tokens.deinit();
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "if" } },
@@ -187,7 +199,9 @@ test "comment in args" {
 
 test "unquoted arg containing quotes" {
     const source = "execute_process(COMMAND git log -1 --format=%cd --date=format:\"%Y-%m-%d %H:%M:%S\")";
-    var tokens = try lexer.lex(source, std.testing.allocator);
+    var errorPosition: ?lexer.Position = null;
+    var tokens = try lexer.lex(source, std.testing.allocator, &errorPosition);
+    try testing.expect(errorPosition == null);
     defer tokens.deinit();
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "execute_process" } },
@@ -205,7 +219,9 @@ test "unquoted arg containing quotes" {
 
 test "open paren after unquoted arg" {
     const source = "if(NOT(-1 EQUAL (${v})))";
-    var tokens = try lexer.lex(source, std.testing.allocator);
+    var errorPosition: ?lexer.Position = null;
+    var tokens = try lexer.lex(source, std.testing.allocator, &errorPosition);
+    try testing.expect(errorPosition == null);
     defer tokens.deinit();
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "if" } },
@@ -225,7 +241,9 @@ test "open paren after unquoted arg" {
 
 test "comment after unquoted arg" {
     const source = "if(VAR#comment\n)";
-    var tokens = try lexer.lex(source, std.testing.allocator);
+    var errorPosition: ?lexer.Position = null;
+    var tokens = try lexer.lex(source, std.testing.allocator, &errorPosition);
+    try testing.expect(errorPosition == null);
     defer tokens.deinit();
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "if" } },
@@ -240,7 +258,9 @@ test "comment after unquoted arg" {
 
 test "not bracketed comment" {
     const source = "#[comment]\n#[=comment]";
-    var tokens = try lexer.lex(source, std.testing.allocator);
+    var errorPosition: ?lexer.Position = null;
+    var tokens = try lexer.lex(source, std.testing.allocator, &errorPosition);
+    try testing.expect(errorPosition == null);
     defer tokens.deinit();
     const expectedTokens = [_]lexer.Token{
         .{ .Comment = .{ .bracketed = false, .text = "#[comment]" } },
@@ -252,12 +272,16 @@ test "not bracketed comment" {
 
 test "bad bracketed comment" {
     const source = "#[[comment]";
-    try std.testing.expectError(error.UnmatchedBrackets, lexer.lex(source, std.testing.allocator));
+    var errorPosition: ?lexer.Position = null;
+    try std.testing.expectError(error.UnmatchedBrackets, lexer.lex(source, std.testing.allocator, &errorPosition));
+    try testing.expectEqual(errorPosition.?, lexer.Position{ .line = 1, .col = 12 });
 }
 
 test "not bracketed arg" {
     const source = "cmd([arg])";
-    var tokens = try lexer.lex(source, std.testing.allocator);
+    var errorPosition: ?lexer.Position = null;
+    var tokens = try lexer.lex(source, std.testing.allocator, &errorPosition);
+    try testing.expect(errorPosition == null);
     defer tokens.deinit();
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "cmd" } },
@@ -270,7 +294,9 @@ test "not bracketed arg" {
 
 test "crlf" {
     const source = "cmd([arg])\r\n";
-    var tokens = try lexer.lex(source, std.testing.allocator);
+    var errorPosition: ?lexer.Position = null;
+    var tokens = try lexer.lex(source, std.testing.allocator, &errorPosition);
+    try testing.expect(errorPosition == null);
     defer tokens.deinit();
     const expectedTokens = [_]lexer.Token{
         .{ .Cmd = .{ .text = "cmd" } },
@@ -284,10 +310,14 @@ test "crlf" {
 
 test "bad quoted arg" {
     const source = "hello(\"asd)";
-    try std.testing.expectError(error.UnbalancedQuotes, lexer.lex(source, std.testing.allocator));
+    var errorPosition: ?lexer.Position = null;
+    try std.testing.expectError(error.UnbalancedQuotes, lexer.lex(source, std.testing.allocator, &errorPosition));
+    try testing.expectEqual(errorPosition.?, lexer.Position{ .line = 1, .col = 12 });
 }
 
 test "invalid cmake 1" {
     const source = "hello(\"asd\"))";
-    try std.testing.expectError(error.ParseError, lexer.lex(source, std.testing.allocator));
+    var errorPosition: ?lexer.Position = null;
+    try std.testing.expectError(error.InvalidSyntax, lexer.lex(source, std.testing.allocator, &errorPosition));
+    try testing.expectEqual(errorPosition.?, lexer.Position{ .line = 1, .col = 13 });
 }

@@ -49,9 +49,32 @@ pub fn main() !void {
         }
     };
 
-    const tokens = try lexer.lex(buf, allocator);
+    var errorPosition: ?lexer.Position = null;
+    const tokens = lexer.lex(buf, allocator, &errorPosition) catch |err| handleParseError(err, options, errorPosition);
     const hasCRLF = std.mem.indexOf(u8, buf, "\r\n") != null;
     formatter.format(tokens, buf.len, options, hasCRLF);
+}
+
+fn handleParseError(err: anyerror, options: args.Options, errorPosition: ?lexer.Position) noreturn {
+    const filename = blk: {
+        if (options.filename.len != 0) {
+            var outBuf: [1024]u8 = undefined;
+            break :blk std.fs.cwd().realpath(options.filename, outBuf[0..]) catch |e| {
+                std.log.err("Unknown error: {s}", .{@errorName(e)});
+                std.process.exit(1);
+            };
+        } else {
+            break :blk "<stdin>";
+        }
+    };
+    if (err == error.ParseError) {
+        if (errorPosition) |ep| {
+            std.log.err("Failed to parse: {s}:{d}:{d}: {s}", .{ filename, ep.line, ep.col, @errorName(err) });
+        }
+    } else {
+        std.log.err("Failed to parse: {s}: {s}", .{ filename, @errorName(err) });
+    }
+    std.process.exit(1);
 }
 
 test {
